@@ -19,6 +19,12 @@ dev = [
     "pytest>=8.0.0",
     "ruff>=0.5.0",
 ]
+# Only needed to run the live-server integration test
+# (tests/integration/test_live_migration.py), which executes a migrated script
+# against a real Digital.ai Release server. The offline tests do not need it.
+integration = [
+    "release-api-client",
+]
 
 [project.scripts]
 jython2py3 = "jython2py3.cli:main"

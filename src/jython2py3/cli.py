@@ -21,7 +21,7 @@ import glob
 import json
 import shutil
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import __version__
@@ -36,7 +36,8 @@ class FileOutcome:
     output: Path | None  # None => stdout
     changed: bool
     todos: list[str]
-    error: str | None = None
+    errors: list[str] = field(default_factory=list)  # `# ERROR[jython2py3]` annotations
+    failure: str | None = None  # set when the file could not be processed at all
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -156,24 +157,28 @@ def cmd_migrate(args: argparse.Namespace) -> int:
             source_text = src.read_text(encoding=_ENCODING)
             result = migrator.migrate(source_text)
         except Exception as exc:  # noqa: BLE001 - report, don't crash the whole run
-            outcomes.append(FileOutcome(src, None, False, [], error=str(exc)))
+            outcomes.append(FileOutcome(src, None, False, [], failure=str(exc)))
             exit_code = 1
             continue
 
         if args.dry_run:
-            outcomes.append(FileOutcome(src, None, result.changed, result.todos))
+            outcomes.append(
+                FileOutcome(src, None, result.changed, result.todos, result.errors))
         elif to_stdout:
             sys.stdout.write(result.migrated)
-            outcomes.append(FileOutcome(src, None, result.changed, result.todos))
+            outcomes.append(
+                FileOutcome(src, None, result.changed, result.todos, result.errors))
         else:
             dest = src if args.in_place else _output_path(out_root, src, base, single)
             try:
                 _write_output(dest, result.migrated, backup=args.backup)
             except OSError as exc:
-                outcomes.append(FileOutcome(src, dest, result.changed, result.todos, str(exc)))
+                outcomes.append(FileOutcome(
+                    src, dest, result.changed, result.todos, result.errors, failure=str(exc)))
                 exit_code = 1
                 continue
-            outcomes.append(FileOutcome(src, dest, result.changed, result.todos))
+            outcomes.append(
+                FileOutcome(src, dest, result.changed, result.todos, result.errors))
 
         if args.diff and result.changed:
             _print_diff(src, source_text, result.migrated)
@@ -206,19 +211,24 @@ def _print_diff(src: Path, before: str, after: str) -> None:
 
 
 def _print_summary(outcomes: list[FileOutcome]) -> None:
-    changed = sum(1 for o in outcomes if o.changed and not o.error)
+    changed = sum(1 for o in outcomes if o.changed and not o.failure)
     todos = sum(len(o.todos) for o in outcomes)
-    errors = sum(1 for o in outcomes if o.error)
+    errors = sum(len(o.errors) for o in outcomes)
+    failed = sum(1 for o in outcomes if o.failure)
     for outcome in outcomes:
-        if outcome.error:
-            print(f"  ERROR {outcome.source}: {outcome.error}", file=sys.stderr)
+        if outcome.failure:
+            print(f"  FAILED {outcome.source}: {outcome.failure}", file=sys.stderr)
             continue
         flag = "changed" if outcome.changed else "unchanged"
-        todo_note = f"  {len(outcome.todos)} TODO" if outcome.todos else ""
-        print(f"  {flag:9} {outcome.source}{todo_note}", file=sys.stderr)
+        notes = ""
+        if outcome.todos:
+            notes += f"  {len(outcome.todos)} TODO"
+        if outcome.errors:
+            notes += f"  {len(outcome.errors)} ERROR"
+        print(f"  {flag:9} {outcome.source}{notes}", file=sys.stderr)
     print(
         f"\n{len(outcomes)} file(s): {changed} changed, {todos} TODO(s) to review, "
-        f"{errors} error(s)",
+        f"{errors} error(s) to fix, {failed} failed",
         file=sys.stderr,
     )
 
@@ -234,7 +244,9 @@ def _write_report(path: Path, outcomes: list[FileOutcome]) -> None:
                 "changed": o.changed,
                 "todo_count": len(o.todos),
                 "todos": o.todos,
-                "error": o.error,
+                "error_count": len(o.errors),
+                "errors": o.errors,
+                "failure": o.failure,
             }
             for o in outcomes
         ],

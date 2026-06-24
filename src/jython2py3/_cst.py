@@ -10,7 +10,7 @@ from fissix.pgen2 import token
 from fissix.pygram import python_symbols as syms
 from fissix.pytree import Base
 
-from . import TODO_MARKER
+from . import ERROR_MARKER, TODO_MARKER
 
 # Statement-level node types: the nodes whose prefix carries a line's indentation.
 _STMT_PARENTS = {syms.suite, syms.file_input}
@@ -36,21 +36,33 @@ def _indentation(prefix: str) -> str:
     return prefix.rpartition("\n")[2]
 
 
-def add_todo(node: Base, message: str) -> bool:
-    """Insert a standalone ``# TODO[jython2py3] ...`` comment on the line above the
+def _add_comment(node: Base, marker: str, message: str) -> bool:
+    """Insert a standalone ``<marker> <message>`` comment on the line above the
     statement that owns ``node``, preserving indentation.
 
-    Returns ``True`` if a comment was added, ``False`` if an identical marker is
+    Returns ``True`` if a comment was added, ``False`` if an identical comment is
     already present (so a fixer that matches repeatedly does not stack duplicates).
     """
     stmt = enclosing_statement(node)
-    comment = f"{TODO_MARKER} {message}"
+    comment = f"{marker} {message}"
     prefix = stmt.prefix
     if comment in prefix:
         return False
     indent = _indentation(prefix)
     stmt.prefix = f"{prefix}{comment}\n{indent}"
     return True
+
+
+def add_todo(node: Base, message: str) -> bool:
+    """Flag ``node`` with a ``# TODO[jython2py3]`` comment: an incomplete conversion
+    that needs a human rewrite."""
+    return _add_comment(node, TODO_MARKER, message)
+
+
+def add_error(node: Base, message: str) -> bool:
+    """Flag ``node`` with a ``# ERROR[jython2py3]`` comment: code that cannot run in
+    the Python 3 container at all (e.g. a Java class) and must be removed."""
+    return _add_comment(node, ERROR_MARKER, message)
 
 
 def is_name(node: Base, value: str) -> bool:

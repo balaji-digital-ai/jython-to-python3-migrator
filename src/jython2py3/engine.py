@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 from fissix import refactor
 
-from . import TODO_MARKER
+from . import ERROR_MARKER, TODO_MARKER
 from .fixers import CUSTOM_FIXERS
 
 # Stock fixers that change behaviour rather than just syntax, or are stylistic. We
@@ -40,6 +40,7 @@ class MigrationResult:
     original: str
     migrated: str
     todos: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
 
     @property
     def changed(self) -> bool:
@@ -48,6 +49,10 @@ class MigrationResult:
     @property
     def todo_count(self) -> int:
         return len(self.todos)
+
+    @property
+    def error_count(self) -> int:
+        return len(self.errors)
 
 
 class Migrator:
@@ -82,4 +87,10 @@ class Migrator:
             for line in migrated.splitlines()
             if TODO_MARKER in line
         ]
-        return MigrationResult(original=source, migrated=migrated, todos=todos)
+        errors = [
+            line.strip()
+            for line in migrated.splitlines()
+            if ERROR_MARKER in line
+        ]
+        return MigrationResult(
+            original=source, migrated=migrated, todos=todos, errors=errors)
