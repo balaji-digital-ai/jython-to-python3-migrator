@@ -1,0 +1,5 @@
+# Normalise line endings to LF in the repository. The migrator emits LF on every
+# platform, so this keeps the committed golden examples byte-stable across Windows
+# and Linux checkouts (and keeps the golden-file test deterministic).
+* text=auto eol=lf
+*.py text eol=lf

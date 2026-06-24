@@ -1,0 +1,52 @@
+[project]
+name = "jython-to-python3-migrator"
+version = "0.1.0"
+description = "Rule-based source-to-source migrator: Digital.ai Release Jython scripts -> Python 3 Script (Container)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Digital.ai Release" }]
+keywords = ["jython", "python3", "migration", "codemod", "digital.ai", "release"]
+dependencies = [
+    # fissix is the maintained fork of lib2to3/2to3. It parses BOTH Python 2 and
+    # Python 3 grammar and round-trips comments + whitespace, which lib2to3 cannot
+    # (lib2to3 is deprecated and removed in Python 3.13).
+    "fissix>=24.4.24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.5.0",
+]
+
+[project.scripts]
+jython2py3 = "jython2py3.cli:main"
+
+[project.urls]
+Documentation = "https://docs.digital.ai/release/docs/next/how-to/container-python3-plugin"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jython2py3"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "unit: fast, hermetic tests for a single fixer or helper",
+    "integration: end-to-end migration of whole example scripts",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+# Example scripts are illustrative I/O, not project source: the Jython inputs are
+# Python 2, and the migrated outputs intentionally retain Tier-2 TODOs to resolve.
+extend-exclude = ["examples"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

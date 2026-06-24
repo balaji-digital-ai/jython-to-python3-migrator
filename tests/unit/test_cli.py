@@ -1,0 +1,77 @@
+"""CLI behaviour: input resolution, output modes, and the JSON report."""
+import json
+
+import pytest
+
+from jython2py3.cli import main
+
+JYTHON = 'print "hi"\nx = releaseVariables["b"]\n'
+
+
+@pytest.mark.unit
+def test_single_file_to_output(tmp_path):
+    src = tmp_path / "in.py"
+    src.write_text(JYTHON, encoding="utf-8")
+    dest = tmp_path / "out.py"
+
+    code = main(["migrate", str(src), "-o", str(dest)])
+
+    assert code == 0
+    migrated = dest.read_text(encoding="utf-8")
+    assert 'print("hi")' in migrated
+    assert 'getReleaseVariable("b")' in migrated
+
+
+@pytest.mark.unit
+def test_directory_mirrored(tmp_path):
+    src_dir = tmp_path / "scripts"
+    (src_dir / "sub").mkdir(parents=True)
+    (src_dir / "a.py").write_text('print "a"\n', encoding="utf-8")
+    (src_dir / "sub" / "b.py").write_text('print "b"\n', encoding="utf-8")
+    out_dir = tmp_path / "migrated"
+
+    code = main(["migrate", str(src_dir), "-o", str(out_dir)])
+
+    assert code == 0
+    assert (out_dir / "a.py").read_text(encoding="utf-8") == 'print("a")\n'
+    assert (out_dir / "sub" / "b.py").read_text(encoding="utf-8") == 'print("b")\n'
+
+
+@pytest.mark.unit
+def test_in_place_with_backup(tmp_path):
+    src = tmp_path / "in.py"
+    src.write_text(JYTHON, encoding="utf-8")
+
+    code = main(["migrate", str(src), "--in-place", "--backup"])
+
+    assert code == 0
+    assert 'print("hi")' in src.read_text(encoding="utf-8")
+    assert (tmp_path / "in.py.bak").read_text(encoding="utf-8") == JYTHON
+
+
+@pytest.mark.unit
+def test_in_place_and_output_conflict(tmp_path):
+    src = tmp_path / "in.py"
+    src.write_text(JYTHON, encoding="utf-8")
+    code = main(["migrate", str(src), "--in-place", "-o", str(tmp_path / "x.py")])
+    assert code == 2
+
+
+@pytest.mark.unit
+def test_report_written(tmp_path):
+    src = tmp_path / "in.py"
+    src.write_text('from java.util import Date\n', encoding="utf-8")
+    report = tmp_path / "report.json"
+
+    main(["migrate", str(src), "--dry-run", "--report", str(report)])
+
+    data = json.loads(report.read_text(encoding="utf-8"))
+    assert data["tool"] == "jython2py3"
+    assert data["files"][0]["todo_count"] == 1
+    assert data["files"][0]["changed"] is True
+
+
+@pytest.mark.unit
+def test_no_inputs_found_is_usage_error(tmp_path):
+    code = main(["migrate", str(tmp_path / "does_not_exist.py")])
+    assert code == 2
