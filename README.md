@@ -70,10 +70,10 @@ fall into two tiers.
 
 | Rule | Example |
 | ---- | ------- |
-| Python 2 → 3 syntax (guide §10) | `print x` → `print(x)`, `d.iteritems()` → `d.items()`, `xrange` → `range`, `except E, e:` → `except E as e:` |
-| Variable dictionaries (guide §5, §8) | `releaseVariables["x"]` → `getReleaseVariable("x")`; `… = v` → `setReleaseVariable("x", v)` (also `folder.`/`global.`) |
-| Reserved objects (guide §5) | a free `release`/`phase`/`task` → injects `release = getCurrentRelease()` etc. at the top |
-| Java imports (guide §11) | `from java.util import Date` → removed, with a breadcrumb |
+| Python 2 → 3 syntax (guide [§10](docs/JYTHON-TO-PYTHON3-MIGRATION.md#10-python-27--python-3-syntax-changes)) | `print x` → `print(x)`, `d.iteritems()` → `d.items()`, `xrange` → `range`, `except E, e:` → `except E as e:` |
+| Variable dictionaries (guide [§5](docs/JYTHON-TO-PYTHON3-MIGRATION.md#5-reserved-variables--helper-functions), [§8](docs/JYTHON-TO-PYTHON3-MIGRATION.md#8-working-with-variables)) | `releaseVariables["x"]` → `getReleaseVariable("x")`; `… = v` → `setReleaseVariable("x", v)` (also `folder.`/`global.`) |
+| Reserved objects (guide [§5](docs/JYTHON-TO-PYTHON3-MIGRATION.md#5-reserved-variables--helper-functions)) | a free `release`/`phase`/`task` → injects `release = getCurrentRelease()` etc. at the top |
+| Java imports (guide [§11](docs/JYTHON-TO-PYTHON3-MIGRATION.md#11-java-integration-differences)) | `from java.util import Date` → removed, with a breadcrumb |
 
 **Tier 2 — annotate** (cannot be rewritten safely; left intact with a marker and a
 guide reference). Two marker kinds, so you can tell "needs a rewrite" from "cannot
@@ -81,8 +81,8 @@ run at all" at a glance:
 
 | Rule | Marker | Why it is not automated |
 | ---- | ------ | ----------------------- |
-| `HttpRequest` → `requests` (guide §9) | `# TODO[jython2py3]` | the original usually reads URL/credentials from a shared configuration the container cannot access |
-| Java **usage** — `Date()`, `Calendar.getInstance()`, `java.util.X` (guide §11) | `# ERROR[jython2py3]` | there is no JVM in the container, so every Java class reference raises at runtime; it has no mechanical Python equivalent and must be redesigned |
+| `HttpRequest` → `requests` (guide [§9](docs/JYTHON-TO-PYTHON3-MIGRATION.md#9-httprequest--httpresponse--requests)) | `# TODO[jython2py3]` | the original usually reads URL/credentials from a shared configuration the container cannot access |
+| Java **usage** — `Date()`, `Calendar.getInstance()`, `java.util.X` (guide [§11](docs/JYTHON-TO-PYTHON3-MIGRATION.md#11-java-integration-differences)) | `# ERROR[jython2py3]` | there is no JVM in the container, so every Java class reference raises at runtime; it has no mechanical Python equivalent and must be redesigned |
 
 `# TODO` means *finish the conversion by hand*; `# ERROR` means *this code cannot run
 in Python 3 — don't use Java*. The Java **import** lines are removed (a Tier-1
