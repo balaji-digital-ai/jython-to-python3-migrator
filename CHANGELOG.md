@@ -34,6 +34,15 @@ Digital.ai Release migration guide it targets, so users can pin to a known rules
   client requires).
 
 ### Added
+- **Template-as-code YAML migration.** Pointing the CLI at a Release *YAML: Template
+  as code* export (`.yaml`/`.yml`) now converts every embedded
+  `xlrelease.ScriptTask` to a `containerPython.PythonTask` (both share the `script`
+  property) and migrates the script body with the existing ruleset. Powered by
+  `ruamel.yaml` round-trip parsing, so key order, comments, the `|-` block style,
+  anchors and secret `!value` tags are preserved — the only diff is the task type and
+  the migrated script. Directories are searched for `*.yaml`/`*.yml` alongside `*.py`,
+  the summary/JSON report gains a per-file `tasks_converted` count, and a worked
+  example lives in `examples/templates/`.
 - Adopted [uv](https://docs.astral.sh/uv/): a committed `uv.lock`, uv-based developer
   and CI workflows. `pip install .` / `pip install -e ".[dev]"` still work.
 - GitHub Actions workflow (`.github/workflows/python-test.yml`) running lint + tests

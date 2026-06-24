@@ -12,6 +12,11 @@ dependencies = [
     # Python 3 grammar and round-trips comments + whitespace, which lib2to3 cannot
     # (lib2to3 is deprecated and removed in Python 3.13).
     "fissix>=24.4.24",
+    # ruamel.yaml round-trips Release "Template as code" YAML exports without
+    # reformatting them: it preserves key order, comments, literal block scalars
+    # (the embedded `script:` bodies) and custom tags like `!value`, so a converted
+    # template differs only in the task type and the migrated script text.
+    "ruamel.yaml>=0.18.0",
 ]
 
 [project.optional-dependencies]

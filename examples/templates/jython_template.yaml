@@ -1,0 +1,28 @@
+---
+apiVersion: xl-release/v1
+kind: Templates
+metadata:
+  home: Test
+spec:
+- template: two
+  scheduledStartDate: 2026-06-24T03:30:00Z
+  phases:
+  - phase: New Phase
+    tasks:
+    - name: New task
+      type: xlrelease.ScriptTask
+      script: |-
+        print "Release:", release.title, "(", release.status, ")"
+        print "Phase:", phase.title
+
+        # Record who migrated this release, then read it straight back from the map.
+        releaseVariables["migratedBy"] = "jython2py3"
+        print "migratedBy =", releaseVariables["migratedBy"]
+
+        # List the release's currently active tasks via the predefined releaseApi object.
+        for activeTask in releaseApi.getActiveTasks(release.id):
+            print "active:", activeTask.title
+  scriptUsername: admin
+  scriptUserPassword: !value "xlrelease_Release_two_scriptUserPassword"
+  riskProfile: Default risk profile
+  author: admin

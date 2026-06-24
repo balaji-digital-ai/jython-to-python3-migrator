@@ -52,6 +52,7 @@ jython2py3 migrate scripts/ -o migrated/      # mirror a directory tree
 jython2py3 migrate scripts/ --in-place --backup
 jython2py3 migrate "scripts/*.py" --dry-run --diff
 jython2py3 migrate scripts/ -o migrated/ --report report.json
+jython2py3 migrate template.yaml -o migrated.yaml   # a Template-as-code export
 ```
 
 | Option | Effect |
@@ -62,8 +63,44 @@ jython2py3 migrate scripts/ -o migrated/ --report report.json
 | `--diff` | print a unified diff per changed file |
 | `--report FILE` | write a JSON migration report (CI-friendly) |
 
-Inputs may be files, directories (searched recursively for `*.py`), or glob
-patterns (expanded in-process, so they work on Windows too).
+Inputs may be files, directories (searched recursively for `*.py`, `*.yaml` and
+`*.yml`), or glob patterns (expanded in-process, so they work on Windows too).
+
+---
+
+## Template-as-code YAML
+
+Release's **YAML: Template as code** view exports a whole template, embedding each
+Jython task's script as a literal block scalar. Point the migrator at that `.yaml`
+(or `.yml`) file and it converts the template **in place**: every
+`xlrelease.ScriptTask` becomes a `containerPython.PythonTask` (both share the same
+`script` property) and its script body is migrated with the exact same rules used for
+standalone `.py` files. Everything else — key order, comments, the `|-` block style,
+anchors and secret `!value` tags — is preserved, so the only diff is the task type
+and the migrated script.
+
+```bash
+jython2py3 migrate template.yaml -o template.python3.yaml
+jython2py3 migrate template.yaml --diff      # preview the change first
+```
+
+```diff
+     - name: New task
+-      type: xlrelease.ScriptTask
++      type: containerPython.PythonTask
+       script: |-
+-        print "Release:", release.title
+-        releaseVariables["migratedBy"] = "jython2py3"
++        release = getCurrentRelease()
++        print("Release:", release.title)
++        setReleaseVariable("migratedBy", "jython2py3")
+```
+
+The summary reports how many tasks were converted, plus the usual TODO/ERROR counts
+(the markers land as comments inside the migrated `script:` block). Re-import the
+file via the same Template-as-code view. A worked example is in
+[`examples/templates/`](examples/templates/). Only tasks whose type is exactly
+`xlrelease.ScriptTask` are converted; every other task is left untouched.
 
 ---
 
@@ -120,12 +157,14 @@ different slice of the rule set:
 | ------- | ------------ | ------ |
 | [`current_context`](examples/jython/current_context.py) | `print`, free `release`/`phase`, the `releaseVariables` map, a `releaseApi` call | **runs as-is** — 0 TODO / 0 ERROR |
 | [`orchestrate_release`](examples/jython/orchestrate_release.py) | the API flow: `templateApi.createTemplate` → `phaseApi.addPhase` → `taskApi.addTask` → `templateApi.create` → `releaseApi.start` | **runs as-is** — API imports pass through unchanged |
+| [`py2_syntax`](examples/jython/py2_syntax.py) | the breadth of the Python 2 → 3 syntax pass: `print`/`print >> stderr`, `except E, e:`, `iteritems()`/`iterkeys()`/`has_key()`, `xrange`, `<>` | **runs as-is** — 0 TODO / 0 ERROR |
 | [`variable_map`](examples/jython/variable_map.py) | release/folder/global maps, a Map (dict) value, an augmented assignment and a whole-map iteration (TODOs), a `java.util.HashMap` (ERROR) | 3 TODO / 1 ERROR |
+| [`task_cleanup`](examples/jython/task_cleanup.py) | free `task` reserved object and a plain read (Tier 1) alongside the variable-map shapes with no getter/setter form — a method call on a lookup, `.keys()`, and `del` | 3 TODO / 0 ERROR |
 | [`java_datetime_report`](examples/jython/java_datetime_report.py) | heavy Java date/time use — every reference flagged "don't use Java in Python 3" | 2 TODO / 5 ERROR |
 | [`http_health_check`](examples/jython/http_health_check.py) | `HttpRequest` → `requests` (TODO) alongside a `java.net.URL` (ERROR) | 3 TODO / 1 ERROR |
 | [`deploy`](examples/jython/deploy.py) | a compact mix of syntax, variable and import rules | 3 TODO / 0 ERROR |
 
-The two "runs as-is" examples are the ones safe to drop straight into a Python 3
+The "runs as-is" examples are the ones safe to drop straight into a Python 3
 Script (Container) task; the others print a checklist of markers to resolve first.
 
 ---

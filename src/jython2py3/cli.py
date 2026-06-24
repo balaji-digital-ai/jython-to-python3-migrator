@@ -26,8 +26,13 @@ from pathlib import Path
 
 from . import __version__
 from .engine import Migrator
+from .yaml_migrate import migrate_yaml
 
 _ENCODING = "utf-8"
+# Release "Template as code" exports. These are migrated through the YAML path
+# (embedded Jython script tasks are converted in place); everything else is treated
+# as a standalone Jython script.
+_YAML_SUFFIXES = {".yaml", ".yml"}
 
 
 @dataclass
@@ -38,6 +43,7 @@ class FileOutcome:
     todos: list[str]
     errors: list[str] = field(default_factory=list)  # `# ERROR[jython2py3]` annotations
     failure: str | None = None  # set when the file could not be processed at all
+    tasks_converted: int | None = None  # set for YAML templates: tasks migrated
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -53,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
         "inputs",
         nargs="+",
         metavar="INPUT",
-        help="files, directories (searched for *.py), or glob patterns",
+        help="files, directories (searched for *.py / *.yaml / *.yml), or glob patterns",
     )
     migrate.add_argument(
         "-o",
@@ -100,7 +106,12 @@ def _collect_sources(inputs: list[str]) -> tuple[list[tuple[Path, Path]], list[s
         if path.is_file():
             pairs.setdefault(path.resolve(), path.parent)
         elif path.is_dir():
-            for found in sorted(path.rglob("*.py")):
+            found_in_dir = [
+                p
+                for pattern in ("*.py", "*.yaml", "*.yml")
+                for p in path.rglob(pattern)
+            ]
+            for found in sorted(found_in_dir):
                 pairs.setdefault(found.resolve(), path)
         else:
             matches = glob.glob(raw, recursive=True)
@@ -155,30 +166,40 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     for src, base in sorted(sources):
         try:
             source_text = src.read_text(encoding=_ENCODING)
-            result = migrator.migrate(source_text)
+            if src.suffix.lower() in _YAML_SUFFIXES:
+                yaml_result = migrate_yaml(source_text, migrator)
+                result = yaml_result
+                tasks_converted = yaml_result.tasks_converted
+            else:
+                result = migrator.migrate(source_text)
+                tasks_converted = None
         except Exception as exc:  # noqa: BLE001 - report, don't crash the whole run
             outcomes.append(FileOutcome(src, None, False, [], failure=str(exc)))
             exit_code = 1
             continue
 
         if args.dry_run:
-            outcomes.append(
-                FileOutcome(src, None, result.changed, result.todos, result.errors))
+            outcomes.append(FileOutcome(
+                src, None, result.changed, result.todos, result.errors,
+                tasks_converted=tasks_converted))
         elif to_stdout:
             sys.stdout.write(result.migrated)
-            outcomes.append(
-                FileOutcome(src, None, result.changed, result.todos, result.errors))
+            outcomes.append(FileOutcome(
+                src, None, result.changed, result.todos, result.errors,
+                tasks_converted=tasks_converted))
         else:
             dest = src if args.in_place else _output_path(out_root, src, base, single)
             try:
                 _write_output(dest, result.migrated, backup=args.backup)
             except OSError as exc:
                 outcomes.append(FileOutcome(
-                    src, dest, result.changed, result.todos, result.errors, failure=str(exc)))
+                    src, dest, result.changed, result.todos, result.errors,
+                    failure=str(exc), tasks_converted=tasks_converted))
                 exit_code = 1
                 continue
-            outcomes.append(
-                FileOutcome(src, dest, result.changed, result.todos, result.errors))
+            outcomes.append(FileOutcome(
+                src, dest, result.changed, result.todos, result.errors,
+                tasks_converted=tasks_converted))
 
         if args.diff and result.changed:
             _print_diff(src, source_text, result.migrated)
@@ -221,6 +242,8 @@ def _print_summary(outcomes: list[FileOutcome]) -> None:
             continue
         flag = "changed" if outcome.changed else "unchanged"
         notes = ""
+        if outcome.tasks_converted is not None:
+            notes += f"  {outcome.tasks_converted} task(s) converted"
         if outcome.todos:
             notes += f"  {len(outcome.todos)} TODO"
         if outcome.errors:
@@ -246,6 +269,7 @@ def _write_report(path: Path, outcomes: list[FileOutcome]) -> None:
                 "todos": o.todos,
                 "error_count": len(o.errors),
                 "errors": o.errors,
+                "tasks_converted": o.tasks_converted,
                 "failure": o.failure,
             }
             for o in outcomes

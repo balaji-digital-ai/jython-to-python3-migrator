@@ -23,7 +23,9 @@ PYTHON3_DIR = _ROOT / "examples" / "python3"
 EXPECTED = {
     "current_context.py": (0, 0),       # fully runnable: nothing left to resolve
     "orchestrate_release.py": (0, 0),    # API orchestration; API imports pass through
+    "py2_syntax.py": (0, 0),             # pure Python 2 -> 3 syntax pass; runs as-is
     "deploy.py": (3, 0),                 # java-import breadcrumb + HttpRequest (import+call)
+    "task_cleanup.py": (3, 0),           # method-call + .keys() + del on a variable map
     "variable_map.py": (3, 1),           # java-import + aug-assign + map iteration; HashMap use
     "java_datetime_report.py": (2, 5),   # two java imports; five Java uses
     "http_health_check.py": (3, 1),      # HttpRequest + java import + call; java URL use

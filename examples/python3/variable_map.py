@@ -17,9 +17,10 @@ legacyMeta.put("build", buildNumber)
 # ... a plain dict is the portable choice, stored back as a Map variable.
 setReleaseVariable("buildMetadata", {"build": buildNumber, "env": targetEnv})
 
-# Folder- and global-scoped variables use their own maps.
-setFolderVariable("lastGoodBuild", buildNumber)
-owner = getGlobalVariable("pipelineOwner")
+# Folder- and global-scoped variables use their own maps; their keys carry the
+# required `folder.` / `global.` prefix (guide section 8), which the rewrite preserves.
+setFolderVariable("folder.lastGoodBuild", buildNumber)
+owner = getGlobalVariable("global.pipelineOwner")
 
 # A running counter: augmented assignment is a read *and* a write, so it cannot
 # collapse into a single getter/setter call.
