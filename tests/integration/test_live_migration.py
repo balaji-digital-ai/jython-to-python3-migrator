@@ -28,8 +28,6 @@ fail with a "Cannot connect to Release API" error.
 
 import ast
 import os
-import time
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -42,47 +40,17 @@ pytest.importorskip(
     reason="Release API client not installed; install .[integration] to run the live test",
 )
 
-from com.xebialabs.xlrelease.domain.forms import CreateRelease  # noqa: E402
-from com.xebialabs.xlrelease.domain.release import Release  # noqa: E402
-from com.xebialabs.xlrelease.domain.task import Task  # noqa: E402
-
-from tests.integration.server import script_user  # noqa: E402
+from tests.integration.server import run_python_script_task  # noqa: E402
 
 pytestmark = pytest.mark.integration
 
 _ROOT = Path(__file__).resolve().parents[2]
 JYTHON_SCRIPT = _ROOT / "examples" / "jython" / "current_context.py"
 
-PYTHON_TASK_TYPE = "containerPython.PythonTask"
-TERMINAL_STATUSES = {"COMPLETED", "FAILED", "ABORTED"}
-
 RELEASE_TITLE = "jython2py3-live-test"
 PHASE_TITLE = "Run Migrated Python"
 TASK_TITLE = "Run migrated script"
 WAIT_TIMEOUT = float(os.environ.get("RELEASE_TIMEOUT", "240"))
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _wait_for_terminal(release_api, release_id: str) -> Release:
-    """Poll the release until it reaches a terminal status or times out."""
-    deadline = time.monotonic() + WAIT_TIMEOUT
-    release = release_api.getRelease(release_id)
-    while release.status not in TERMINAL_STATUSES and time.monotonic() < deadline:
-        time.sleep(5)
-        release = release_api.getRelease(release_id)
-    return release
-
-
-def _find_task_id(release: Release, title: str) -> str:
-    """Return the id of the task with ``title`` by walking the release tree."""
-    for phase in release.phases or []:
-        for task in phase.tasks or []:
-            if task.title == title:
-                return task.id
-    raise AssertionError(f"task {title!r} not found in release {release.id}")
 
 
 # ---------------------------------------------------------------------------
@@ -115,70 +83,24 @@ def test_migrated_script_runs_end_to_end(
     assert result.error_count == 0, (
         f"migrated script still has errors to fix: {result.errors}")
     ast.parse(result.migrated)  # must be valid Python 3
-    script = result.migrated
 
-    script_username, script_password = script_user()
-    template_id = None
-    release_id = None
-
-    try:
-        # --- 2. Create a template with the Run-as user so the migrated script's
-        #        getCurrent* / get*Variable helpers can call back into the API.
-        start = datetime.now(timezone.utc)
-        template = template_api.createTemplate(Release(
-            title=f"{RELEASE_TITLE} - Template",
-            scheduledStartDate=start,
-            dueDate=start + timedelta(days=1),
-            scriptUsername=script_username,
-            scriptUserPassword=script_password,
-        ))
-        template_id = template.id
-
-        # Rename the default phase.
-        template = template_api.getTemplate(template.id)
-        phase = template.phases[0]
-        phase.title = PHASE_TITLE
-        phase = phase_api.updatePhase(phase.id, phase)
-
-        # Attach the Python 3 Script task running the *migrated* source.
-        task_api.addTask(phase.id, Task(
-            title=TASK_TITLE, type=PYTHON_TASK_TYPE, script=script))
-
-        # Create and start the release.
-        release = release_api.getRelease(
-            template_api.create(
-                template.id, CreateRelease(releaseTitle=RELEASE_TITLE)).id)
-        release_id = release.id
-        task_id = _find_task_id(release, TASK_TITLE)
-        release_api.start(release_id)
-
-        # --- 3. Wait for completion and verify the migrated script ran cleanly.
-        final = _wait_for_terminal(release_api, release_id)
-        if final.status not in TERMINAL_STATUSES:
-            pytest.skip(
-                f"Release {release_id} did not finish within {WAIT_TIMEOUT:.0f}s "
-                f"(status={final.status}); is a container runner available?")
-
-        task = task_api.getTask(task_id)
-        assert final.status == "COMPLETED", (
-            f"Migrated script failed at runtime; release ended {final.status}, "
-            f"task status={task.status}, comments={getattr(task, 'comments', None)}")
-        assert task.status == "COMPLETED"
-
-    finally:
-        if release_id:
-            try:
-                rel = release_api.getRelease(release_id)
-                if rel.status not in TERMINAL_STATUSES:
-                    release_api.abort(release_id, "test cleanup")
-            except Exception:
-                pass
-            try:
-                release_api.delete(release_id)
-            except Exception:
-                pass
-        if template_id:
-            try:
-                template_api.deleteTemplate(template_id)
-            except Exception:
-                pass
+    # --- 2. Run the migrated script as a live container task and verify it completes.
+    run = run_python_script_task(
+        template_api=template_api,
+        phase_api=phase_api,
+        task_api=task_api,
+        release_api=release_api,
+        script=result.migrated,
+        release_title=RELEASE_TITLE,
+        phase_title=PHASE_TITLE,
+        task_title=TASK_TITLE,
+        timeout=WAIT_TIMEOUT,
+    )
+    if not run.finished:
+        pytest.skip(
+            f"Release did not finish within {WAIT_TIMEOUT:.0f}s "
+            f"(status={run.release_status}); is a container runner available?")
+    assert run.release_status == "COMPLETED", (
+        f"Migrated script failed at runtime; release ended {run.release_status}, "
+        f"task status={run.task_status}, comments={run.comments}")
+    assert run.task_status == "COMPLETED"
