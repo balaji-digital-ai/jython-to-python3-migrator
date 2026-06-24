@@ -5,8 +5,7 @@ Release **Jython Script** automation (`xlrelease.ScriptTask`) into **Python 3 Sc
 (Container)** scripts (`containerPython.PythonTask`).
 
 It automates the mechanical parts of the bundled
-[Jython → Python 3 migration guide](docs/JYTHON-TO-PYTHON3-MIGRATION.md) (also published
-[online](https://docs.digital.ai/release/docs/next/how-to/container-python3-plugin)) and
+[Jython → Python 3 migration guide](docs/JYTHON-TO-PYTHON3-MIGRATION.md) and
 **flags** the parts that need a human decision — it never silently emits code that might
 be wrong.
 
