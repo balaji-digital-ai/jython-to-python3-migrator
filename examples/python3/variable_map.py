@@ -1,7 +1,7 @@
 # Work with the Jython variable maps - release, folder and global. Each plain
-# read/write becomes the matching get*/set* helper in Python 3. The Java HashMap
-# and the augmented assignment have no one-to-one container equivalent, so they are
-# flagged (ERROR and TODO respectively) for a human to resolve.
+# read/write becomes the matching get*/set* helper in Python 3. The Java HashMap, the
+# augmented assignment, and iterating the map itself have no one-to-one container
+# equivalent, so they are flagged (ERROR and TODOs respectively) for a human to resolve.
 # TODO[jython2py3] removed Java import `from java.util import HashMap`; replace its usages with a Python 3 equivalent (guide section 11)
 
 # Read inputs straight from the release variable map.
@@ -25,5 +25,11 @@ owner = getGlobalVariable("pipelineOwner")
 # collapse into a single getter/setter call.
 # TODO[jython2py3] augmented assignment on releaseVariables[...] is read+write; split into getReleaseVariable/setReleaseVariable (guide section 8)
 releaseVariables["deployCount"] += 1
+
+# Iterating the map itself (rather than a single key) has no getter/setter form, so
+# the whole loop header is flagged for a manual rewrite.
+# TODO[jython2py3] `releaseVariables` has no direct getter/setter form here; rewrite this use with getReleaseVariable/setReleaseVariable by hand (guide section 8)
+for varName in releaseVariables:
+    print("configured variable:", varName)
 
 print("Recorded build", buildNumber, "for", owner)

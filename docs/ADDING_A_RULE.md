@@ -68,8 +68,9 @@ def test_example(migrate):
     assert "newName(1)" in result.migrated
 ```
 
-Run `pytest -m unit`. For broader coverage, extend `examples/jython/deploy.py` and
-the integration assertions in `tests/integration/test_examples.py`.
+Run `uv run pytest -m unit` (or `pytest -m unit`). For broader coverage, extend
+`examples/jython/deploy.py` and the integration assertions in
+`tests/integration/test_examples.py`.
 
 ## 5. Reference the spec
 

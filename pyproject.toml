@@ -23,7 +23,10 @@ dev = [
 # (tests/integration/test_live_migration.py), which executes a migrated script
 # against a real Digital.ai Release server. The offline tests do not need it.
 integration = [
-    "release-api-client",
+    # The Release API client requires Python >= 3.10; the core migrator still supports
+    # 3.9, so gate this optional dependency with a marker (the live test that needs it
+    # runs on 3.10+ anyway). Keeps `requires-python = ">=3.9"` resolvable.
+    "digitalai-release-api-client==26.3.0b6 ; python_version >= '3.10'",
 ]
 
 [project.scripts]

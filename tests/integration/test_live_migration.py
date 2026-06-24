@@ -33,11 +33,20 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-from com.xebialabs.xlrelease.domain.forms import CreateRelease
-from com.xebialabs.xlrelease.domain.release import Release
-from com.xebialabs.xlrelease.domain.task import Task
 
-from tests.integration.server import script_user
+# The Release API client is an optional ([integration]) dependency. When it is not
+# installed, skip this whole module at collection time instead of failing with an
+# ImportError, so a plain offline `pytest` run still passes.
+pytest.importorskip(
+    "com.xebialabs.xlrelease.release_api_client",
+    reason="Release API client not installed; install .[integration] to run the live test",
+)
+
+from com.xebialabs.xlrelease.domain.forms import CreateRelease  # noqa: E402
+from com.xebialabs.xlrelease.domain.release import Release  # noqa: E402
+from com.xebialabs.xlrelease.domain.task import Task  # noqa: E402
+
+from tests.integration.server import script_user  # noqa: E402
 
 pytestmark = pytest.mark.integration
 

@@ -45,3 +45,25 @@ def test_already_bound_is_not_reinjected(migrate):
 def test_attribute_named_release_is_not_injected(migrate):
     result = migrate("name = deployment.release\n")
     assert "getCurrentRelease" not in result.migrated
+
+
+@pytest.mark.unit
+def test_comprehension_loopvar_named_release_is_not_injected(migrate):
+    # A comprehension variable is locally scoped in Python 3, so `release` here is the
+    # loop variable, not the reserved object - injecting a helper call would be wrong.
+    result = migrate("xs = [release for release in items]\n")
+    assert "getCurrentRelease" not in result.migrated
+
+
+@pytest.mark.unit
+def test_dict_comprehension_loopvar_named_phase_is_not_injected(migrate):
+    result = migrate("xs = {p: 1 for phase in items}\n")
+    assert "getCurrentPhase" not in result.migrated
+
+
+@pytest.mark.unit
+def test_free_use_still_injected_despite_unrelated_comprehension(migrate):
+    # `task` is genuinely free; the comprehension over `phase` must not suppress it.
+    result = migrate("t = task.id\nxs = [phase for phase in items]\n")
+    assert "task = getCurrentTask()" in result.migrated
+    assert "getCurrentPhase" not in result.migrated

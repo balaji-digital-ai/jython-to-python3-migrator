@@ -125,8 +125,12 @@ class FixReservedObjects(fixer_base.BaseFix):
         ):
             return True
 
-        # `for name in ...`
-        if parent.type == syms.for_stmt:
+        # `for name in ...` (a for-statement) or `... for name in ...` (a
+        # comprehension's `comp_for`). In both, the target sits before the `in`
+        # keyword. A comprehension variable is locally scoped in Python 3, so a name
+        # like `release` used only as a comprehension target is not the reserved
+        # object and must not trigger an injection.
+        if parent.type in (syms.for_stmt, syms.comp_for):
             children = parent.children
             try:
                 in_index = next(

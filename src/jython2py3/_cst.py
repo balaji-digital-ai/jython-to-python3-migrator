@@ -36,6 +36,21 @@ def _indentation(prefix: str) -> str:
     return prefix.rpartition("\n")[2]
 
 
+def _statement_indent(stmt: Base) -> str:
+    """The indentation of ``stmt``'s source line.
+
+    For the *first* statement in an indented block the indentation is carried by the
+    preceding ``INDENT`` token, not by the statement's own prefix (which is empty).
+    Reading it from the statement prefix alone would yield no indent and dedent the
+    statement when we splice a comment in above it. Fall back to the prefix for
+    top-level statements and later statements in a block, where it does carry the
+    indent."""
+    prev = stmt.prev_sibling
+    if prev is not None and prev.type == token.INDENT:
+        return prev.value
+    return _indentation(stmt.prefix)
+
+
 def _add_comment(node: Base, marker: str, message: str) -> bool:
     """Insert a standalone ``<marker> <message>`` comment on the line above the
     statement that owns ``node``, preserving indentation.
@@ -48,7 +63,7 @@ def _add_comment(node: Base, marker: str, message: str) -> bool:
     prefix = stmt.prefix
     if comment in prefix:
         return False
-    indent = _indentation(prefix)
+    indent = _statement_indent(stmt)
     stmt.prefix = f"{prefix}{comment}\n{indent}"
     return True
 

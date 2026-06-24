@@ -24,7 +24,7 @@ EXPECTED = {
     "current_context.py": (0, 0),       # fully runnable: nothing left to resolve
     "orchestrate_release.py": (0, 0),    # API orchestration; API imports pass through
     "deploy.py": (3, 0),                 # java-import breadcrumb + HttpRequest (import+call)
-    "variable_map.py": (2, 1),           # java-import + augmented assignment; HashMap use
+    "variable_map.py": (3, 1),           # java-import + aug-assign + map iteration; HashMap use
     "java_datetime_report.py": (2, 5),   # two java imports; five Java uses
     "http_health_check.py": (3, 1),      # HttpRequest + java import + call; java URL use
 }

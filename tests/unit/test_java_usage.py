@@ -4,6 +4,8 @@
 reference the now-undefined Java symbol, because there is no mechanical Python
 equivalent to substitute.
 """
+import ast
+
 import pytest
 
 from jython2py3 import ERROR_MARKER
@@ -67,3 +69,13 @@ def test_attribute_named_like_java_symbol_is_safe(migrate):
 def test_non_java_code_has_no_errors(migrate):
     result = migrate("from datetime import datetime\nnow = datetime.now()\n")
     assert result.error_count == 0
+
+
+@pytest.mark.unit
+def test_error_inside_indented_block_keeps_valid_indentation(migrate):
+    # Annotating the *first* statement of a block must not dedent it: the indentation
+    # of that line lives in the preceding INDENT token, not the statement prefix.
+    result = migrate("from java.util import Date\nif True:\n    now = Date()\n")
+    assert result.error_count == 1
+    assert "    now = Date()" in result.migrated  # still indented under the `if`
+    ast.parse(result.migrated)  # the whole module must still parse

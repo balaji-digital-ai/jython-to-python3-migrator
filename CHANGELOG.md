@@ -5,6 +5,41 @@ Digital.ai Release migration guide it targets, so users can pin to a known rules
 
 ## [Unreleased]
 
+### Fixed
+- A `releaseVariables[...]` (or `folder`/`global`) subscript used as a **tuple/list
+  unpacking target** (e.g. `releaseVariables["x"], y = a, b`) is no longer rewritten
+  to a getter on the left of `=` — which produced code that fails to parse. It is now
+  left intact and flagged with a `# TODO[jython2py3]` to use the setter explicitly
+  (§8). The migrator never silently emits invalid Python.
+- **Leftover variable-map references are now flagged** instead of silently passed
+  through. A use that is not a plain read/write — `releaseVariables.keys()`,
+  `for k in releaseVariables`, a chained `releaseVariables["x"].foo()` — left a bare
+  `releaseVariables` name that does not exist in the container (a runtime `NameError`).
+  A new `fix_release_var_refs` rule stamps each with a `# TODO[jython2py3]` (§8).
+- **Tier-2 annotations no longer break indentation** when the flagged statement is the
+  first/only statement in an indented block (`if:`, `for:`, `def:` …). The comment was
+  inserted with no indent, dedenting the statement and producing invalid Python; the
+  indent is now read from the block's `INDENT` token. Affected every `# TODO` / `#
+  ERROR` inside a block.
+- A comprehension/loop variable named `release` / `phase` / `task`
+  (`[release for release in items]`) no longer triggers a spurious
+  `release = getCurrentRelease()` injection — comprehension targets are recognised as
+  local bindings.
+- Offline `pytest` no longer fails at collection when the optional `[integration]`
+  Release API client is not installed: `tests/integration/conftest.py` imports the
+  client lazily and `test_live_migration.py` self-skips via `importorskip`. A plain
+  `pytest` with only `[dev]` installed now passes, as the README documents.
+- Corrected the `[integration]` dependency from the non-existent `release-api-client`
+  to the published `digitalai-release-api-client` (gated to Python ≥ 3.10, which that
+  client requires).
+
+### Added
+- Adopted [uv](https://docs.astral.sh/uv/): a committed `uv.lock`, uv-based developer
+  and CI workflows. `pip install .` / `pip install -e ".[dev]"` still work.
+- GitHub Actions workflow (`.github/workflows/python-test.yml`) running lint + tests
+  on a Windows + Linux × Python 3.9/3.12 matrix (via uv), matching the documented CI
+  claim.
+
 ### Changed
 - `xlrelease.*` imports (e.g. `from xlrelease.HttpRequest import HttpRequest`) are now
   **removed** with a breadcrumb instead of left in place — they cannot load in the

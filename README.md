@@ -17,22 +17,29 @@ be wrong.
 
 ## Install & run (clone-and-run)
 
+This is a [uv](https://docs.astral.sh/uv/) project. With uv installed:
+
 ```bash
 git clone <repo-url> jython-to-python3-migrator
 cd jython-to-python3-migrator
 
-# create an isolated environment and install the tool
+# create the environment from the lockfile, then run the tool inside it
+uv sync
+uv run jython2py3 migrate path/to/script.py -o migrated/script.py
+```
+
+`uv sync` creates `.venv/` and installs the pinned dependencies; `uv run` executes
+inside it, so there is nothing to activate.
+
+Prefer pip? It is a standard PEP 621 package:
+
+```bash
 python -m venv .venv
 # Windows:  .venv\Scripts\activate
 # Linux:    source .venv/bin/activate
 pip install .
-
-# migrate
 jython2py3 migrate path/to/script.py -o migrated/script.py
 ```
-
-No-install alternative from a clone: `pip install fissix` then
-`python -m jython2py3 migrate ...`.
 
 ---
 
@@ -81,6 +88,7 @@ run at all" at a glance:
 | Rule | Marker | Why it is not automated |
 | ---- | ------ | ----------------------- |
 | `HttpRequest` → `requests` (guide [§9](docs/JYTHON-TO-PYTHON3-MIGRATION.md#9-httprequest--httpresponse--requests)) | `# TODO[jython2py3]` | the original usually reads URL/credentials from a shared configuration the container cannot access |
+| Variable-map use that is not a plain read/write — augmented assignment, `del`, an unpacking target, `releaseVariables.keys()`, `for k in releaseVariables`, `releaseVariables["x"].foo()` (guide [§8](docs/JYTHON-TO-PYTHON3-MIGRATION.md#8-working-with-variables)) | `# TODO[jython2py3]` | only a plain read/write maps to a single `get`/`set` helper; anything else needs a human to choose the getter/setter split |
 | Java **usage** — `Date()`, `Calendar.getInstance()`, `java.util.X` (guide [§11](docs/JYTHON-TO-PYTHON3-MIGRATION.md#11-java-integration-differences)) | `# ERROR[jython2py3]` | there is no JVM in the container, so every Java class reference raises at runtime; it has no mechanical Python equivalent and must be redesigned |
 
 `# TODO` means *finish the conversion by hand*; `# ERROR` means *this code cannot run
@@ -112,7 +120,7 @@ different slice of the rule set:
 | ------- | ------------ | ------ |
 | [`current_context`](examples/jython/current_context.py) | `print`, free `release`/`phase`, the `releaseVariables` map, a `releaseApi` call | **runs as-is** — 0 TODO / 0 ERROR |
 | [`orchestrate_release`](examples/jython/orchestrate_release.py) | the API flow: `templateApi.createTemplate` → `phaseApi.addPhase` → `taskApi.addTask` → `templateApi.create` → `releaseApi.start` | **runs as-is** — API imports pass through unchanged |
-| [`variable_map`](examples/jython/variable_map.py) | release/folder/global maps, a Map (dict) value, an augmented assignment (TODO), a `java.util.HashMap` (ERROR) | 2 TODO / 1 ERROR |
+| [`variable_map`](examples/jython/variable_map.py) | release/folder/global maps, a Map (dict) value, an augmented assignment and a whole-map iteration (TODOs), a `java.util.HashMap` (ERROR) | 3 TODO / 1 ERROR |
 | [`java_datetime_report`](examples/jython/java_datetime_report.py) | heavy Java date/time use — every reference flagged "don't use Java in Python 3" | 2 TODO / 5 ERROR |
 | [`http_health_check`](examples/jython/http_health_check.py) | `HttpRequest` → `requests` (TODO) alongside a `java.net.URL` (ERROR) | 3 TODO / 1 ERROR |
 | [`deploy`](examples/jython/deploy.py) | a compact mix of syntax, variable and import rules | 3 TODO / 0 ERROR |
@@ -159,12 +167,16 @@ No other module changes. Each rule is isolated, so one rule cannot break another
 ## Development
 
 ```bash
-pip install -e ".[dev]"
-pytest                 # run all tests (the live test self-skips with no server)
-pytest -m unit         # fast unit tests only
-pytest -m integration  # end-to-end migration tests
-ruff check .           # lint
+uv sync --extra dev           # create .venv with dev tools from the lockfile
+uv run pytest                 # run all tests (the live test self-skips with no server)
+uv run pytest -m unit         # fast unit tests only
+uv run pytest -m integration  # end-to-end migration tests
+uv run ruff check .           # lint
 ```
+
+The equivalent pip workflow is `pip install -e ".[dev]"` then `pytest` / `ruff
+check .`. A plain test run needs no Release server and no Release API client — the
+live test self-skips — so it passes offline on a fresh `uv sync --extra dev`.
 
 Tests live in `tests/unit` (one file per fixer) and `tests/integration`
 (whole-script migrations of `examples/`).
@@ -176,13 +188,14 @@ tests: it migrates `examples/jython/current_context.py` and then **executes the
 migrated Python 3** as a `containerPython.PythonTask` on a real Digital.ai Release
 server, proving the converted script has no migration *or* runtime issues.
 
-It needs the Release API client and a running server with a container runner:
+It needs the Release API client (Python 3.10+) and a running server with a container
+runner:
 
 ```bash
-pip install -e ".[dev,integration]"        # adds the Release API client
+uv sync --extra dev --extra integration    # adds the Release API client
 
 # run the live test (defaults to http://localhost:5516, admin/admin)
-pytest tests/integration/test_live_migration.py -v
+uv run pytest tests/integration/test_live_migration.py -v
 ```
 
 The test **skips automatically** when no server is reachable, so a plain `pytest`
@@ -204,7 +217,7 @@ migrated script's `getCurrent*` / `get*Variable` helpers fail with a "Cannot
 connect to Release API" error.
 
 ```bash
-pytest tests/integration/test_live_migration.py \
+uv run pytest tests/integration/test_live_migration.py \
   --release-url https://release.example.com \
   --release-token "$MY_PAT" -v
 ```
