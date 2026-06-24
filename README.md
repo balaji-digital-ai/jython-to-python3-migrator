@@ -167,6 +167,10 @@ different slice of the rule set:
 The "runs as-is" examples are the ones safe to drop straight into a Python 3
 Script (Container) task; the others print a checklist of markers to resolve first.
 
+See **[`docs/examples.md`](docs/examples.md)** for a detailed walk-through of every
+example — the Python scripts above and the Template-as-code YAML — with the exact
+rules each one exercises and annotated before/after diffs.
+
 ---
 
 ## How it works
