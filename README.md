@@ -151,25 +151,12 @@ reports both counts (`N TODO(s) to review, M error(s) to fix`).
 `examples/jython/<name>.py` is the input; `examples/python3/<name>.py` is the
 committed migrated output (a golden file, regenerated with
 `jython2py3 migrate examples/jython/ -o examples/python3/`). Each one targets a
-different slice of the rule set:
-
-| Example | Demonstrates | Result |
-| ------- | ------------ | ------ |
-| [`current_context`](examples/jython/current_context.py) | `print`, free `release`/`phase`, the `releaseVariables` map, a `releaseApi` call | **runs as-is** — 0 TODO / 0 ERROR |
-| [`orchestrate_release`](examples/jython/orchestrate_release.py) | the API flow: `templateApi.createTemplate` → `phaseApi.addPhase` → `taskApi.addTask` → `templateApi.create` → `releaseApi.start` | **runs as-is** — API imports pass through unchanged |
-| [`py2_syntax`](examples/jython/py2_syntax.py) | the breadth of the Python 2 → 3 syntax pass: `print`/`print >> stderr`, `except E, e:`, `iteritems()`/`iterkeys()`/`has_key()`, `xrange`, `<>` | **runs as-is** — 0 TODO / 0 ERROR |
-| [`variable_map`](examples/jython/variable_map.py) | release/folder/global maps, a Map (dict) value, an augmented assignment and a whole-map iteration (TODOs), a `java.util.HashMap` (ERROR) | 3 TODO / 1 ERROR |
-| [`task_cleanup`](examples/jython/task_cleanup.py) | free `task` reserved object and a plain read (Tier 1) alongside the variable-map shapes with no getter/setter form — a method call on a lookup, `.keys()`, and `del` | 3 TODO / 0 ERROR |
-| [`java_datetime_report`](examples/jython/java_datetime_report.py) | heavy Java date/time use — every reference flagged "don't use Java in Python 3" | 2 TODO / 5 ERROR |
-| [`http_health_check`](examples/jython/http_health_check.py) | `HttpRequest` → `requests` (TODO) alongside a `java.net.URL` (ERROR) | 3 TODO / 1 ERROR |
-| [`deploy`](examples/jython/deploy.py) | a compact mix of syntax, variable and import rules | 3 TODO / 0 ERROR |
-
-The "runs as-is" examples are the ones safe to drop straight into a Python 3
-Script (Container) task; the others print a checklist of markers to resolve first.
+different slice of the rule set — from scripts that **run as-is** to ones that mix
+in `# TODO` / `# ERROR` markers to resolve.
 
 See **[`docs/examples.md`](docs/examples.md)** for a detailed walk-through of every
-example — the Python scripts above and the Template-as-code YAML — with the exact
-rules each one exercises and annotated before/after diffs.
+example — the Python scripts and the Template-as-code YAML — with the exact rules
+each one exercises and annotated before/after diffs.
 
 ---
 
