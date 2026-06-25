@@ -117,7 +117,79 @@ def build_parser() -> argparse.ArgumentParser:
         help="prepend a 'migrated by jython2py3' header comment to each script",
     )
     migrate.set_defaults(func=cmd_migrate)
+
+    _add_mcp_commands(sub)
     return parser
+
+
+def _add_connection_args(parser: argparse.ArgumentParser) -> None:
+    """Shared flags describing how to reach the Release MCP server."""
+    parser.add_argument(
+        "--server-url",
+        metavar="URL",
+        help="MCP server endpoint (default: $RELEASE_MCP_URL or http://localhost:8000/mcp)",
+    )
+    parser.add_argument(
+        "--token",
+        metavar="TOKEN",
+        help="bearer token for the MCP endpoint (default: $RELEASE_MCP_TOKEN; usually "
+        "not needed - Release credentials live on the server, not here)",
+    )
+    parser.add_argument(
+        "--transport",
+        choices=["http", "sse"],
+        help="MCP transport (default: $RELEASE_MCP_TRANSPORT or http/streamable-http)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        metavar="SECONDS",
+        help="per-call timeout in seconds (default: 60)",
+    )
+
+
+def _add_mcp_commands(sub: argparse._SubParsersAction) -> None:
+    """Register the `mcp` command group (pull/convert templates over MCP)."""
+    mcp = sub.add_parser(
+        "mcp",
+        help="pull and migrate templates from a Release instance via the MCP server",
+    )
+    mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
+
+    listing = mcp_sub.add_parser("list", help="list templates (or tools) on the server")
+    listing.add_argument(
+        "--tools",
+        action="store_true",
+        help="list the MCP tool names the server exposes, instead of templates",
+    )
+    _add_connection_args(listing)
+    listing.set_defaults(func=cmd_mcp_list)
+
+    pull = mcp_sub.add_parser(
+        "migrate",
+        help="pull a template by id, migrate its Jython tasks, save (and optionally push)",
+    )
+    pull.add_argument("template_id", metavar="TEMPLATE_ID", help="id of the template to migrate")
+    pull.add_argument(
+        "-o",
+        "--output",
+        metavar="FILE",
+        help="write the migrated template JSON here (default: stdout)",
+    )
+    pull.add_argument(
+        "--push",
+        action="store_true",
+        help="create a NEW migrated template back in Release (never overwrites the original)",
+    )
+    pull.add_argument(
+        "--push-title",
+        metavar="TITLE",
+        help="title for the pushed template (default: '<original> (migrated to Python 3)')",
+    )
+    pull.add_argument("--diff", action="store_true", help="print a JSON diff of the changes")
+    pull.add_argument("--report", metavar="FILE", help="write a JSON migration report to FILE")
+    _add_connection_args(pull)
+    pull.set_defaults(func=cmd_mcp_migrate)
 
 
 def _collect_sources(inputs: list[str]) -> tuple[list[tuple[Path, Path]], list[str]]:
@@ -313,6 +385,142 @@ def _write_report(path: Path, outcomes: list[FileOutcome]) -> None:
     with path.open("w", encoding=_ENCODING, newline="") as handle:
         json.dump(report, handle, indent=2)
     print(f"report written to {path}", file=sys.stderr)
+
+
+def _build_client(args: argparse.Namespace):
+    """Construct a ReleaseMCPClient from CLI flags + environment fallbacks."""
+    from .mcp.client import MCPConfig, ReleaseMCPClient
+
+    config = MCPConfig.from_env(
+        url=args.server_url,
+        token=args.token,
+        transport=args.transport,
+        timeout=args.timeout,
+    )
+    return ReleaseMCPClient(config)
+
+
+def _template_label(template: dict) -> str:
+    """A short, human-friendly identifier for a template summary row."""
+    tid = template.get("id") or template.get("templateId") or "?"
+    title = template.get("title") or template.get("name") or "(untitled)"
+    return f"{tid}\t{title}"
+
+
+def cmd_mcp_list(args: argparse.Namespace) -> int:
+    from .mcp.client import ReleaseMCPError
+
+    client = _build_client(args)
+    try:
+        if args.tools:
+            for name in sorted(client.list_tools()):
+                print(name)
+            return 0
+        templates = client.list_templates()
+    except ReleaseMCPError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    if not templates:
+        print("no templates returned by the server", file=sys.stderr)
+        return 0
+    for template in templates:
+        print(_template_label(template))
+    print(f"\n{len(templates)} template(s)", file=sys.stderr)
+    return 0
+
+
+def cmd_mcp_migrate(args: argparse.Namespace) -> int:
+    from .mcp.client import ReleaseMCPError
+    from .mcp.migrate import migrate_template_object
+
+    client = _build_client(args)
+    try:
+        original = client.get_template(args.template_id)
+    except ReleaseMCPError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    result = migrate_template_object(original)
+    migrated_json = json.dumps(result.template, indent=2)
+
+    if args.diff:
+        _print_diff(
+            Path(f"template:{args.template_id}"),
+            json.dumps(original, indent=2) + "\n",
+            migrated_json + "\n",
+        )
+
+    if args.output:
+        dest = Path(args.output)
+        try:
+            _write_output(dest, migrated_json, backup=False)
+        except OSError as exc:
+            print(f"error: could not write {dest}: {exc}", file=sys.stderr)
+            return 1
+        print(f"migrated template written to {dest}", file=sys.stderr)
+    else:
+        sys.stdout.write(migrated_json + "\n")
+
+    exit_code = 0
+    if args.push:
+        exit_code = _push_migrated(client, original, result.template, args.push_title)
+
+    _print_mcp_summary(args.template_id, result)
+    if args.report:
+        _write_report(
+            Path(args.report),
+            [FileOutcome(
+                source=Path(f"template:{args.template_id}"),
+                output=Path(args.output) if args.output else None,
+                changed=result.changed,
+                todos=result.todos,
+                errors=result.errors,
+                transforms=result.transforms,
+                tasks_converted=result.tasks_converted,
+            )],
+        )
+    return exit_code
+
+
+def _push_migrated(client, original: dict, migrated: dict, push_title: str | None) -> int:
+    """Create a NEW template in Release from the migrated object. Never overwrites."""
+    from .mcp.client import ReleaseMCPError
+
+    base_title = original.get("title") or original.get("name") or "Template"
+    new_title = push_title or f"{base_title} (migrated to Python 3)"
+    to_push = _prepare_for_push(migrated, new_title)
+    try:
+        client.create_template(to_push)
+    except ReleaseMCPError as exc:
+        print(f"error: push failed: {exc}", file=sys.stderr)
+        return 1
+    print(f"pushed new template {new_title!r} to Release", file=sys.stderr)
+    return 0
+
+
+def _prepare_for_push(migrated: dict, new_title: str) -> dict:
+    """Strip server-assigned identity so create_template makes a fresh template."""
+    import copy
+
+    to_push = copy.deepcopy(migrated)
+    # Remove ids so the server allocates new ones rather than rejecting a duplicate.
+    for key in ("id", "$id", "templateId"):
+        to_push.pop(key, None)
+    if "title" in to_push or "name" in to_push:
+        to_push["title" if "title" in to_push else "name"] = new_title
+    else:
+        to_push["title"] = new_title
+    return to_push
+
+
+def _print_mcp_summary(template_id: str, result) -> None:
+    print(
+        f"\ntemplate {template_id}: {result.tasks_converted} task(s) converted, "
+        f"{result.transforms} auto-transform(s), {len(result.todos)} TODO(s) to review, "
+        f"{len(result.errors)} error(s) to fix",
+        file=sys.stderr,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

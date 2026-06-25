@@ -13,20 +13,17 @@ on the tasks we convert. Tasks of any other type are left exactly as they were.
 """
 from __future__ import annotations
 
-from collections.abc import Iterator
 from dataclasses import dataclass, field
 from io import StringIO
 
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString
 
+from ._tasks import JYTHON_TASK_TYPE, PYTHON3_TASK_TYPE, iter_script_tasks
 from .engine import Migrator
 
-# The Jython script task we convert, and the Python 3 Script (Container) task it
-# becomes. Both task types expose the script under the same `script` input property,
-# so converting a task is a type swap plus an in-place migration of the script body.
-JYTHON_TASK_TYPE = "xlrelease.ScriptTask"
-PYTHON3_TASK_TYPE = "containerPython.PythonTask"
+# Re-exported for callers/tests that import the task-type constants from this module.
+__all__ = ["JYTHON_TASK_TYPE", "PYTHON3_TASK_TYPE", "YamlMigrationResult", "migrate_yaml"]
 
 
 @dataclass
@@ -74,7 +71,7 @@ def migrate_yaml(source: str, migrator: Migrator | None = None) -> YamlMigration
     transforms = 0
     converted = 0
 
-    for task in _iter_script_tasks(data):
+    for task in iter_script_tasks(data):
         script = task.get("script")
         if not isinstance(script, str):
             continue  # a ScriptTask with a non-string (or missing) script: leave it
@@ -99,20 +96,3 @@ def migrate_yaml(source: str, migrator: Migrator | None = None) -> YamlMigration
         transforms=transforms,
         tasks_converted=converted,
     )
-
-
-def _iter_script_tasks(node: object) -> Iterator[dict]:
-    """Yield every mapping that is an ``xlrelease.ScriptTask`` carrying a ``script``,
-    anywhere in the document (templates -> phases -> tasks, including nested subtasks).
-
-    The walk is structural, not schema-aware, so it works regardless of how deeply a
-    task is nested (gates, parallel groups, sub-releases, ...).
-    """
-    if isinstance(node, dict):
-        if node.get("type") == JYTHON_TASK_TYPE and "script" in node:
-            yield node
-        for value in node.values():
-            yield from _iter_script_tasks(value)
-    elif isinstance(node, (list, tuple)):
-        for item in node:
-            yield from _iter_script_tasks(item)

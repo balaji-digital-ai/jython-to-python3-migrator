@@ -48,7 +48,7 @@ Then keep the expectation tables in sync (tests fail loudly if you forget):
 - `uv sync --extra dev` then `uv run pytest` (or `-m unit` / `-m integration`).
 - `uv run ruff check .` — `examples/` is excluded (the inputs are Python 2).
 - The whole suite is **offline** — no Release server or API client. Don't add live/
-  network tests. Python 3.9+ (`requires-python` in `pyproject.toml`); the tool is
+  network tests. Python 3.10+ (`requires-python` in `pyproject.toml`); the tool is
   OS-agnostic and must keep running identically on Windows and Linux.
 
 ## Gotchas
