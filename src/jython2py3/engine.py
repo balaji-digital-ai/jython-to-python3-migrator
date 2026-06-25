@@ -41,6 +41,7 @@ class MigrationResult:
     migrated: str
     todos: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    transforms: int = 0  # Tier-1 auto-rewrites applied (annotations excluded)
 
     @property
     def changed(self) -> bool:
@@ -64,6 +65,43 @@ class Migrator:
         # ourselves below, so quiet the logger to keep CLI output clean.
         logging.getLogger("RefactoringTool").setLevel(logging.ERROR)
         self._tool = refactor.RefactoringTool(fixer_names)
+        # Per-migrate() tally of how many rules fired; see _instrument_fixers.
+        self._applications = 0
+        self._instrument_fixers()
+
+    def _instrument_fixers(self) -> None:
+        """Wrap every fixer's ``transform`` so we can count rule applications.
+
+        A fixer may ``match`` a node yet decide not to rewrite it (returning ``None``
+        and touching nothing), so counting every ``transform`` call would over-count.
+        A real application shows up in one of two ways: the fixer **returns a new node**
+        (fissix splices it in afterwards), or it **edits the tree in place** and returns
+        ``None`` (a node replaced, a prefix annotated). The wrapper detects the first via
+        the return value and the second via the tree's ``was_changed`` flag, which fissix
+        sets through :meth:`Base.changed` on any in-place edit. This covers the stock and
+        custom fixers uniformly without each one threading a counter through its logic.
+        """
+        for fixer in self._tool.pre_order + self._tool.post_order:
+            fixer.transform = self._counting(fixer.transform)
+
+    def _counting(self, transform):
+        def wrapper(node, results):
+            root = node
+            while root.parent is not None:
+                root = root.parent
+            was_changed = root.was_changed
+            root.was_changed = False
+            try:
+                new = transform(node, results)
+            finally:
+                edited_in_place = root.was_changed
+                # Keep the tree's overall changed flag intact for fissix.
+                root.was_changed = was_changed or edited_in_place
+            if new is not None or edited_in_place:
+                self._applications += 1
+            return new
+
+        return wrapper
 
     def migrate(self, source: str) -> MigrationResult:
         """Migrate Jython ``source`` and return the Python 3 result.
@@ -76,8 +114,10 @@ class Migrator:
         had_trailing_newline = source.endswith("\n")
         to_parse = source if had_trailing_newline else source + "\n"
 
+        self._applications = 0
         tree = self._tool.refactor_string(to_parse, name="<script>")
         migrated = str(tree)
+        applications = self._applications
 
         if not had_trailing_newline and migrated.endswith("\n"):
             migrated = migrated[:-1]
@@ -92,5 +132,10 @@ class Migrator:
             for line in migrated.splitlines()
             if ERROR_MARKER in line
         ]
+        # Tier-1 transforms are the rule applications that were *not* annotations.
+        # Each annotation (a Tier-2 rule) emits exactly one marker line, so removing
+        # the marker-line counts from the total isolates the silent auto-rewrites.
+        transforms = max(0, applications - len(todos) - len(errors))
         return MigrationResult(
-            original=source, migrated=migrated, todos=todos, errors=errors)
+            original=source, migrated=migrated, todos=todos, errors=errors,
+            transforms=transforms)

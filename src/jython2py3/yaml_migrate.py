@@ -37,6 +37,7 @@ class YamlMigrationResult:
     migrated: str
     todos: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    transforms: int = 0  # Tier-1 auto-rewrites across all converted task scripts
     tasks_converted: int = 0
 
     @property
@@ -70,6 +71,7 @@ def migrate_yaml(source: str, migrator: Migrator | None = None) -> YamlMigration
 
     todos: list[str] = []
     errors: list[str] = []
+    transforms = 0
     converted = 0
 
     for task in _iter_script_tasks(data):
@@ -83,6 +85,7 @@ def migrate_yaml(source: str, migrator: Migrator | None = None) -> YamlMigration
         task["type"] = PYTHON3_TASK_TYPE
         todos.extend(result.todos)
         errors.extend(result.errors)
+        transforms += result.transforms
         converted += 1
 
     buffer = StringIO()
@@ -93,6 +96,7 @@ def migrate_yaml(source: str, migrator: Migrator | None = None) -> YamlMigration
         migrated=buffer.getvalue(),
         todos=todos,
         errors=errors,
+        transforms=transforms,
         tasks_converted=converted,
     )
 

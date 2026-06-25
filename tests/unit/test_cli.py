@@ -72,6 +72,47 @@ def test_report_written(tmp_path):
 
 
 @pytest.mark.unit
+def test_report_counts_tier1_transforms(tmp_path):
+    # Two silent Tier-1 rewrites (print, getReleaseVariable) and no annotations.
+    src = tmp_path / "in.py"
+    src.write_text(JYTHON, encoding="utf-8")
+    report = tmp_path / "report.json"
+
+    main(["migrate", str(src), "--dry-run", "--report", str(report)])
+
+    file_report = json.loads(report.read_text(encoding="utf-8"))["files"][0]
+    assert file_report["transform_count"] == 2
+    assert file_report["todo_count"] == 0
+
+
+@pytest.mark.unit
+def test_header_prepended_and_idempotent(tmp_path):
+    src = tmp_path / "in.py"
+    src.write_text(JYTHON, encoding="utf-8")
+    dest = tmp_path / "out.py"
+
+    main(["migrate", str(src), "-o", str(dest), "--header"])
+    once = dest.read_text(encoding="utf-8")
+    assert once.startswith("# Migrated from Jython by jython2py3")
+    assert 'getReleaseVariable("b")' in once  # the migration still happened
+
+    # Re-running over the already-stamped output must not stack a second header.
+    main(["migrate", str(dest), "-o", str(dest), "--header"])
+    assert dest.read_text(encoding="utf-8").count("# Migrated from Jython") == 1
+
+
+@pytest.mark.unit
+def test_no_header_by_default(tmp_path):
+    src = tmp_path / "in.py"
+    src.write_text(JYTHON, encoding="utf-8")
+    dest = tmp_path / "out.py"
+
+    main(["migrate", str(src), "-o", str(dest)])
+
+    assert "# Migrated from Jython" not in dest.read_text(encoding="utf-8")
+
+
+@pytest.mark.unit
 def test_no_inputs_found_is_usage_error(tmp_path):
     code = main(["migrate", str(tmp_path / "does_not_exist.py")])
     assert code == 2

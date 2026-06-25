@@ -45,26 +45,40 @@ jython2py3 migrate path/to/script.py -o migrated/script.py
 
 ## Usage
 
-```bash
-jython2py3 migrate script.py                  # preview migrated source on stdout
-jython2py3 migrate script.py -o out.py        # write one file
-jython2py3 migrate scripts/ -o migrated/      # mirror a directory tree
-jython2py3 migrate scripts/ --in-place --backup
-jython2py3 migrate "scripts/*.py" --dry-run --diff
-jython2py3 migrate scripts/ -o migrated/ --report report.json
-jython2py3 migrate template.yaml -o migrated.yaml   # a Template-as-code export
-```
+```text
+usage: jython2py3 migrate [-h] [-o PATH] [--in-place] [--backup] [--dry-run]
+                          [--diff] [--report FILE] [--header]
+                          INPUT [INPUT ...]
 
-| Option | Effect |
-| ------ | ------ |
-| `-o, --output PATH` | output file (single input) or directory (mirrors layout) |
-| `--in-place` | overwrite the inputs (`--backup` keeps `<file>.bak`) |
-| `--dry-run` | report what would change; write nothing |
-| `--diff` | print a unified diff per changed file |
-| `--report FILE` | write a JSON migration report (CI-friendly) |
+positional arguments:
+  INPUT              files, directories (searched for *.py / *.yaml / *.yml), or glob patterns
+
+options:
+  -h, --help         show this help message and exit
+  -o, --output PATH  output file (single input) or directory (mirrors input layout)
+  --in-place         overwrite the input files in place
+  --backup           with --in-place, keep the original as <file>.bak
+  --dry-run          do not write anything; only report what would change
+  --diff             print a unified diff for each changed file
+  --report FILE      write a JSON migration report to FILE
+  --header           prepend a '# Migrated from Jython by jython2py3' header to each script
+```
 
 Inputs may be files, directories (searched recursively for `*.py`, `*.yaml` and
 `*.yml`), or glob patterns (expanded in-process, so they work on Windows too).
+
+### Examples
+
+```bash
+jython2py3 migrate script.py                        # preview migrated source on stdout
+jython2py3 migrate script.py -o out.py              # write one file
+jython2py3 migrate scripts/ -o migrated/            # mirror a directory tree
+jython2py3 migrate scripts/ --in-place --backup     # overwrite, keeping *.bak originals
+jython2py3 migrate "scripts/*.py" --dry-run --diff  # preview changes, write nothing
+jython2py3 migrate scripts/ -o migrated/ --report report.json   # + JSON report
+jython2py3 migrate scripts/ -o migrated/ --header   # stamp each output file
+jython2py3 migrate template.yaml -o migrated.yaml   # a Template-as-code export
+```
 
 ---
 
@@ -134,7 +148,9 @@ breadcrumb); this rule additionally stamps each **use** of the imported symbol.
 
 Run `jython2py3 migrate <script> --diff` to see both tiers in action, then resolve
 the `# TODO[jython2py3]` and `# ERROR[jython2py3]` markers by hand. The CLI summary
-reports both counts (`N TODO(s) to review, M error(s) to fix`).
+counts all three per file — the silent Tier-1 rewrites plus the two marker kinds
+(`K auto-transform(s), N TODO(s) to review, M error(s) to fix`) — and `--report`
+records the same as `transform_count` / `todo_count` / `error_count` per file.
 
 > **Scope:** the tool migrates the mechanical ~80%. `HttpRequest` rewrites, mapping
 > outputs to `result`/`result_2`/`result_3`, and Java-interop redesign remain human

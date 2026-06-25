@@ -5,6 +5,17 @@ Digital.ai Release migration guide it targets, so users can pin to a known rules
 
 ## [Unreleased]
 
+### Added
+- **Per-file auto-transform counts.** Migration results now track how many Tier-1
+  rewrites were applied silently (annotations excluded). The CLI summary reports them
+  (`K auto-transform(s)`) alongside the TODO/ERROR counts, and `--report` records a
+  `transform_count` per file — giving visibility into the safe changes that don't carry
+  an inline marker.
+- **`--header` flag.** Prepends a single `# Migrated from Jython by jython2py3` header
+  comment (pointing reviewers at the `# TODO[jython2py3]` / `# ERROR[jython2py3]`
+  markers) to each migrated Python script. Off by default; idempotent, so re-running
+  never stacks the header. YAML templates are left structurally untouched.
+
 ### Fixed
 - A `releaseVariables[...]` (or `folder`/`global`) subscript used as a **tuple/list
   unpacking target** (e.g. `releaseVariables["x"], y = a, b`) is no longer rewritten
