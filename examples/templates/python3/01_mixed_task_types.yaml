@@ -1,0 +1,45 @@
+apiVersion: xl-release/v1
+kind: Templates
+metadata:
+  home: Test
+spec:
+- template: Mixed Task Types
+  scheduledStartDate: 2026-06-24T03:30:00Z
+  phases:
+  - phase: Build
+    tasks:
+    # A Jython script task -> converted to a containerPython.PythonTask and migrated.
+    - name: Summarise release
+      type: containerPython.PythonTask
+      script: |-
+        release = getCurrentRelease()
+        print("Release:", release.title, "(", release.status, ")")
+        setReleaseVariable("migratedBy", "jython2py3")
+        print("migratedBy =", getReleaseVariable("migratedBy"))
+      scriptUsername: admin
+      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+    # A manual task -> left untouched. Its Jython-looking description is prose, not a
+    # script, so the migrator must NOT rewrite it.
+    - name: Approve build
+      type: xlrelease.Task
+      description: |-
+        Reviewer note - the line below is prose, not code:
+        print "this is not migrated"
+      team: Release Admin
+    # A gate task -> left untouched (it has no script to migrate).
+    - name: Quality gate
+      type: xlrelease.GateTask
+      conditions:
+      - name: All tests green
+        type: xlrelease.GateCondition
+        checked: false
+    # A task that is already a Python 3 container task -> left exactly as-is.
+    - name: Publish metrics
+      type: containerPython.PythonTask
+      script: |-
+        print("already migrated")
+        setReleaseVariable("published", True)
+      scriptUsername: admin
+      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+  riskProfile: Default risk profile
+  author: admin

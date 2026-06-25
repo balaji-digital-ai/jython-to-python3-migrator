@@ -21,14 +21,15 @@ PYTHON3_DIR = _ROOT / "examples" / "python3"
 # name -> (expected TODO count, expected ERROR count). Keeping the numbers here makes
 # each example's "what should the reader still fix?" contract explicit and tested.
 EXPECTED = {
-    "current_context.py": (0, 0),       # fully runnable: nothing left to resolve
-    "orchestrate_release.py": (0, 0),    # API orchestration; API imports pass through
-    "py2_syntax.py": (0, 0),             # pure Python 2 -> 3 syntax pass; runs as-is
-    "deploy.py": (3, 0),                 # java-import breadcrumb + HttpRequest (import+call)
-    "task_cleanup.py": (3, 0),           # method-call + .keys() + del on a variable map
-    "variable_map.py": (3, 1),           # java-import + aug-assign + map iteration; HashMap use
-    "java_datetime_report.py": (2, 5),   # two java imports; five Java uses
-    "http_health_check.py": (3, 1),      # HttpRequest + java import + call; java URL use
+    "01_reserved_objects.py": (0, 0),       # reserved objects + API + vars; fully runnable
+    "02_python2_syntax.py": (0, 0),         # pure Python 2 -> 3 syntax pass; runs as-is
+    "03_release_orchestration.py": (0, 0),  # API create flow; API imports pass through
+    "04_release_report.py": (0, 0),         # read/update via API objects; fully runnable
+    "05_release_variables.py": (3, 1),      # java-import + aug-assign + map iteration; HashMap use
+    "06_variable_edge_cases.py": (3, 0),    # method-call + .keys() + del on a variable map
+    "07_http_request.py": (3, 1),           # HttpRequest (import+call) + java import; java URL use
+    "08_java_interop.py": (9, 13),          # nine java imports; thirteen Java uses
+    "09_deploy_pipeline.py": (3, 0),        # java-import breadcrumb + HttpRequest (import+call)
 }
 
 EXAMPLES = sorted(p.name for p in JYTHON_DIR.glob("*.py"))

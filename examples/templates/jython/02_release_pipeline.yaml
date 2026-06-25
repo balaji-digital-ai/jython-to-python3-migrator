@@ -1,0 +1,43 @@
+---
+apiVersion: xl-release/v1
+kind: Templates
+metadata:
+  home: Test
+spec:
+- template: Release Pipeline
+  scheduledStartDate: 2026-06-24T03:30:00Z
+  phases:
+  - phase: Prepare
+    tasks:
+    # Script task -> converted.
+    - name: Set build variables
+      type: xlrelease.ScriptTask
+      script: |-
+        buildNumber = releaseVariables["buildNumber"]
+        releaseVariables["artifactPath"] = "/artifacts/%s/app.zip" % buildNumber
+        print "Prepared build", buildNumber
+      scriptUsername: admin
+      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+    # Manual task -> untouched.
+    - name: Approve deployment
+      type: xlrelease.Task
+      description: Approve before the Deploy phase runs.
+      team: Release Admin
+  - phase: Deploy
+    tasks:
+    # Another script task in a later phase -> also converted.
+    - name: Report active tasks
+      type: xlrelease.ScriptTask
+      script: |-
+        for activeTask in releaseApi.getActiveTasks(release.id):
+            print "active:", activeTask.title
+      scriptUsername: admin
+      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+    # Notification task -> untouched.
+    - name: Notify team
+      type: xlrelease.NotificationTask
+      addresses:
+      - team@example.com
+      subject: Deployment complete
+  riskProfile: Default risk profile
+  author: admin

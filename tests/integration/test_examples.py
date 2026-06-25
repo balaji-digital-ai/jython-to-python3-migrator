@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[2]
-EXAMPLE = _ROOT / "examples" / "jython" / "deploy.py"
-GOLDEN = _ROOT / "examples" / "python3" / "deploy.py"
+EXAMPLE = _ROOT / "examples" / "jython" / "09_deploy_pipeline.py"
+GOLDEN = _ROOT / "examples" / "python3" / "09_deploy_pipeline.py"
 
 
 @pytest.fixture
@@ -20,8 +20,8 @@ def migrated(migrate):
 
 @pytest.mark.integration
 def test_matches_committed_golden(migrated):
-    # The committed examples/python3/deploy.py is a golden file: if a rule changes,
-    # this fails until it is regenerated (see docs/ADDING_A_RULE.md).
+    # The committed examples/python3/09_deploy_pipeline.py is a golden file: if a rule
+    # changes, this fails until it is regenerated (see docs/ADDING_A_RULE.md).
     assert migrated.migrated == GOLDEN.read_text(encoding="utf-8")
 
 

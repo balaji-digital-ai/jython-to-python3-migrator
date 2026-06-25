@@ -69,7 +69,7 @@ def test_example(migrate):
 ```
 
 Run `uv run pytest -m unit` (or `pytest -m unit`). For broader coverage, extend
-`examples/jython/deploy.py` and the integration assertions in
+`examples/jython/09_deploy_pipeline.py` and the integration assertions in
 `tests/integration/test_examples.py`.
 
 ## 5. Reference the spec

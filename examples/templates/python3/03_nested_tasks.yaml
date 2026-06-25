@@ -1,0 +1,40 @@
+apiVersion: xl-release/v1
+kind: Templates
+metadata:
+  home: Test
+spec:
+- template: Nested Tasks
+  scheduledStartDate: 2026-06-24T03:30:00Z
+  phases:
+  - phase: Parallel work
+    tasks:
+    # A group task with nested sub-tasks. The migrator walks the document
+    # structurally, so a script task nested inside the group is still converted.
+    - name: Run in parallel
+      type: xlrelease.ParallelGroup
+      tasks:
+      - name: Tally completed tasks
+        type: containerPython.PythonTask
+        script: |-
+          release = getCurrentRelease()
+          completed = 0
+          for phase in phaseApi.getPhases(release.id):
+              for task in taskApi.getTasks(phase.id):
+                  if task.status == "COMPLETED":
+                      completed += 1
+          setReleaseVariable("completedTasks", completed)
+        scriptUsername: admin
+        scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+      - name: Manual check
+        type: xlrelease.Task
+        description: Verify alongside the script task.
+    # A top-level script task in the same phase -> converted too.
+    - name: Finalize
+      type: containerPython.PythonTask
+      script: |-
+        release = getCurrentRelease()
+        print("Finalizing", release.title)
+      scriptUsername: admin
+      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+  riskProfile: Default risk profile
+  author: admin

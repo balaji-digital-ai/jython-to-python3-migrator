@@ -12,11 +12,14 @@ overview of the tool see the [README](../README.md).
 
 ## How the examples are laid out
 
-* `examples/jython/<name>.py` — the **input** (Jython, Python 2 syntax).
-* `examples/python3/<name>.py` — the committed **migrated output** (a *golden*
+* `examples/jython/<NN_name>.py` — the **input** (Jython, Python 2 syntax).
+* `examples/python3/<NN_name>.py` — the committed **migrated output** (a *golden*
   file used by the integration tests).
-* `examples/templates/jython_template.yaml` — a Template-as-code **export** input.
-* `examples/templates/python3_template.yaml` — its migrated **golden** output.
+* `examples/templates/jython/<name>.yaml` — a Template-as-code **export** input.
+* `examples/templates/python3/<name>.yaml` — its migrated **golden** output.
+
+The Python examples are numbered roughly easiest-first: `01`–`04` migrate cleanly
+and run as-is, `05`–`09` carry markers to resolve.
 
 Regenerate the Python goldens after changing a rule:
 
@@ -27,7 +30,7 @@ jython2py3 migrate examples/jython/ -o examples/python3/
 Preview a single example with a diff before writing anything:
 
 ```bash
-jython2py3 migrate examples/jython/variable_map.py --diff
+jython2py3 migrate examples/jython/05_release_variables.py --diff
 ```
 
 ## Markers in the output
@@ -47,30 +50,29 @@ fix`).
 
 | Example | Demonstrates | Result |
 | ------- | ------------ | ------ |
-| [`current_context`](#current_context) | `print`, free `release`/`phase`, the `releaseVariables` map, a `releaseApi` call | **runs as-is** — 0 TODO / 0 ERROR |
-| [`orchestrate_release`](#orchestrate_release) | the API flow: `templateApi.createTemplate` → `phaseApi.addPhase` → `taskApi.addTask` → `templateApi.create` → `releaseApi.start` | **runs as-is** — API imports pass through |
-| [`py2_syntax`](#py2_syntax) | the breadth of the Python 2 → 3 syntax pass | **runs as-is** — 0 TODO / 0 ERROR |
-| [`variable_map`](#variable_map) | release/folder/global maps, augmented assignment and whole-map iteration (TODOs), a `java.util.HashMap` (ERROR) | 3 TODO / 1 ERROR |
-| [`task_cleanup`](#task_cleanup) | free `task` + plain read (Tier 1) beside variable-map shapes with no getter/setter form | 3 TODO / 0 ERROR |
-| [`java_datetime_report`](#java_datetime_report) | heavy Java date/time use — every reference flagged | 2 TODO / 5 ERROR |
-| [`http_health_check`](#http_health_check) | `HttpRequest` → `requests` (TODO) beside a `java.net.URL` (ERROR) | 3 TODO / 1 ERROR |
-| [`deploy`](#deploy) | a compact mix of syntax, variable and import rules | 3 TODO / 0 ERROR |
+| [`01_reserved_objects`](#01_reserved_objects) | `print`, free `release`/`phase`, the `releaseVariables` map (incl. conditional writes), a `releaseApi` call | **runs as-is** — 0 TODO / 0 ERROR |
+| [`02_python2_syntax`](#02_python2_syntax) | the breadth of the Python 2 → 3 syntax pass | **runs as-is** — 0 TODO / 0 ERROR |
+| [`03_release_orchestration`](#03_release_orchestration) | the API flow: `templateApi.createTemplate` → `phaseApi.addPhase` → `taskApi.addTask` → `templateApi.create` → `releaseApi.start` | **runs as-is** — API imports pass through |
+| [`04_release_report`](#04_release_report) | read/update via `phaseApi`/`taskApi`/`searchApi`, a task write-back, input validation, `result*` outputs | **runs as-is** — 0 TODO / 0 ERROR |
+| [`05_release_variables`](#05_release_variables) | release/folder/global maps, augmented assignment and whole-map iteration (TODOs), a `java.util.HashMap` (ERROR) | 3 TODO / 1 ERROR |
+| [`06_variable_edge_cases`](#06_variable_edge_cases) | free `task` + plain read (Tier 1) beside variable-map shapes with no getter/setter form | 3 TODO / 0 ERROR |
+| [`07_http_request`](#07_http_request) | `HttpRequest` → `requests` (TODO) and JSON parsing beside a `java.net.URL` (ERROR) | 3 TODO / 1 ERROR |
+| [`08_java_interop`](#08_java_interop) | the full Java standard-library grab-bag — every reference flagged | 9 TODO / 13 ERROR |
+| [`09_deploy_pipeline`](#09_deploy_pipeline) | a compact mix of syntax, variable and import rules | 3 TODO / 0 ERROR |
 
 The "runs as-is" examples are safe to drop straight into a Python 3 Script
 (Container) task; the others print a checklist of markers to resolve first.
 
 ---
 
-## `current_context`
+## 01_reserved_objects
 
-**Files:** [`examples/jython/current_context.py`](../examples/jython/current_context.py)
-→ [`examples/python3/current_context.py`](../examples/python3/current_context.py)
+**Files:** [`examples/jython/01_reserved_objects.py`](../examples/jython/01_reserved_objects.py)
+→ [`examples/python3/01_reserved_objects.py`](../examples/python3/01_reserved_objects.py)
 &nbsp;·&nbsp; **Result:** runs as-is — 0 TODO / 0 ERROR
 
-The smallest end-to-end example, and the one the
-[live-server test](../README.md#live-server-test-migrate-and-run) actually runs on a
-real Release server. It uses only Tier-1 constructs, so the output needs no manual
-fix-ups.
+The smallest end-to-end example. It uses only Tier-1 constructs, so the output needs
+no manual fix-ups.
 
 Rules exercised:
 
@@ -78,7 +80,8 @@ Rules exercised:
 * **Free reserved objects** `release` / `phase` → the migrator injects
   `release = getCurrentRelease()` and `phase = getCurrentPhase()` at the top.
 * **Variable map** — `releaseVariables["x"] = v` → `setReleaseVariable("x", v)`,
-  and `releaseVariables["x"]` (read) → `getReleaseVariable("x")`.
+  and `releaseVariables["x"]` (read) → `getReleaseVariable("x")`, including the
+  conditional `if`/`else` writes.
 * **Predefined API object** `releaseApi` passes through unchanged.
 
 ```diff
@@ -99,24 +102,10 @@ Rules exercised:
 > no `result` / `result_2` / `result_3` output variables — those belong to the
 > Python 3 Script (Container) task — so this script does not set them.
 
-## `orchestrate_release`
+## 02_python2_syntax
 
-**Files:** [`examples/jython/orchestrate_release.py`](../examples/jython/orchestrate_release.py)
-→ [`examples/python3/orchestrate_release.py`](../examples/python3/orchestrate_release.py)
-&nbsp;·&nbsp; **Result:** runs as-is — API imports pass through
-
-Provisions and launches a release from a script task, exercising the full
-create-template → add-phase → add-task → start-release flow through the predefined
-API objects (`templateApi` / `phaseApi` / `taskApi` / `releaseApi`).
-
-The key point: the `com.xebialabs.xlrelease.*` domain imports are valid in **both**
-Jython and the Python 3 Release API client, so the migrator leaves them untouched.
-Only the Python 2 `print` statements and the `releaseVariables` reads change.
-
-## `py2_syntax`
-
-**Files:** [`examples/jython/py2_syntax.py`](../examples/jython/py2_syntax.py)
-→ [`examples/python3/py2_syntax.py`](../examples/python3/py2_syntax.py)
+**Files:** [`examples/jython/02_python2_syntax.py`](../examples/jython/02_python2_syntax.py)
+→ [`examples/python3/02_python2_syntax.py`](../examples/python3/02_python2_syntax.py)
 &nbsp;·&nbsp; **Result:** runs as-is — 0 TODO / 0 ERROR
 
 Focused on the Python 2 → 3 **syntax** pass (guide
@@ -136,10 +125,45 @@ golden shows the breadth of that pass:
 
 Everything here is Tier 1, so the output runs as-is.
 
-## `variable_map`
+## 03_release_orchestration
 
-**Files:** [`examples/jython/variable_map.py`](../examples/jython/variable_map.py)
-→ [`examples/python3/variable_map.py`](../examples/python3/variable_map.py)
+**Files:** [`examples/jython/03_release_orchestration.py`](../examples/jython/03_release_orchestration.py)
+→ [`examples/python3/03_release_orchestration.py`](../examples/python3/03_release_orchestration.py)
+&nbsp;·&nbsp; **Result:** runs as-is — API imports pass through
+
+Provisions and launches a release from a script task, exercising the full
+create-template → add-phase → add-task → start-release flow through the predefined
+API objects (`templateApi` / `phaseApi` / `taskApi` / `releaseApi`).
+
+The key point: the `com.xebialabs.xlrelease.*` domain imports are valid in **both**
+Jython and the Python 3 Release API client, so the migrator leaves them untouched.
+Only the Python 2 `print` statements and the `releaseVariables` reads change.
+
+## 04_release_report
+
+**Files:** [`examples/jython/04_release_report.py`](../examples/jython/04_release_report.py)
+→ [`examples/python3/04_release_report.py`](../examples/python3/04_release_report.py)
+&nbsp;·&nbsp; **Result:** runs as-is — 0 TODO / 0 ERROR
+
+The read/update counterpart to `03_release_orchestration`: instead of provisioning a
+new release it walks an existing one and maintains it, entirely through Tier-1
+constructs.
+
+* **Reserved object + API objects** — `release` is injected; `phaseApi.getPhases`,
+  `taskApi.getTasks`, `taskApi.updateTask` and `searchApi.searchTasksByTitle` all
+  pass through unchanged.
+* **Variable map** — the `environment` read and the `completedTasks` /
+  `pendingTasks` writes become the `get` / `setReleaseVariable` helpers.
+* **Plain Python** — `raise Exception(...)` validation, the nested phase/task loop and
+  the `result` / `result_2` / `result_3` assignments all migrate unchanged.
+
+A good template for "inspect the release, validate inputs, update a task, record the
+outcome" maintenance scripts.
+
+## 05_release_variables
+
+**Files:** [`examples/jython/05_release_variables.py`](../examples/jython/05_release_variables.py)
+→ [`examples/python3/05_release_variables.py`](../examples/python3/05_release_variables.py)
 &nbsp;·&nbsp; **Result:** 3 TODO / 1 ERROR
 
 Works with all three variable maps — **release**, **folder** and **global** — and
@@ -158,10 +182,10 @@ shows where the rewrite stops:
 * **TODO** — `for varName in releaseVariables:` iterates the map itself, which has
   no getter/setter form, so the loop header is flagged.
 
-## `task_cleanup`
+## 06_variable_edge_cases
 
-**Files:** [`examples/jython/task_cleanup.py`](../examples/jython/task_cleanup.py)
-→ [`examples/python3/task_cleanup.py`](../examples/python3/task_cleanup.py)
+**Files:** [`examples/jython/06_variable_edge_cases.py`](../examples/jython/06_variable_edge_cases.py)
+→ [`examples/python3/06_variable_edge_cases.py`](../examples/python3/06_variable_edge_cases.py)
 &nbsp;·&nbsp; **Result:** 3 TODO / 0 ERROR
 
 Mixes a clean Tier-1 rewrite with the Tier-2 variable-map shapes that have **no**
@@ -177,28 +201,10 @@ single getter/setter form:
 A good illustration that "uses the variable map" is not enough to auto-convert —
 only a **plain read or write** maps cleanly to a helper.
 
-## `java_datetime_report`
+## 07_http_request
 
-**Files:** [`examples/jython/java_datetime_report.py`](../examples/jython/java_datetime_report.py)
-→ [`examples/python3/java_datetime_report.py`](../examples/python3/java_datetime_report.py)
-&nbsp;·&nbsp; **Result:** 2 TODO / 5 ERROR
-
-The "don't use Java" case, at its most extreme. The script leans entirely on the
-Java standard library for date handling (`java.util.Date` / `Calendar`,
-`java.text.SimpleDateFormat`). None of it runs in the container, so the migrator:
-
-* drops the two `from java.* import ...` lines (each leaves a **TODO** breadcrumb), and
-* stamps **every** Java use — constructor calls, factory methods (`Calendar.getInstance()`),
-  constant references (`Calendar.DAY_OF_MONTH`) and even a fully-qualified inline
-  reference (`java.text.SimpleDateFormat(...)`) — with an **ERROR**.
-
-The fix is a wholesale rewrite using Python's `datetime` module; the markers form a
-checklist of every spot to revisit.
-
-## `http_health_check`
-
-**Files:** [`examples/jython/http_health_check.py`](../examples/jython/http_health_check.py)
-→ [`examples/python3/http_health_check.py`](../examples/python3/http_health_check.py)
+**Files:** [`examples/jython/07_http_request.py`](../examples/jython/07_http_request.py)
+→ [`examples/python3/07_http_request.py`](../examples/python3/07_http_request.py)
 &nbsp;·&nbsp; **Result:** 3 TODO / 1 ERROR
 
 A realistic mix of both annotation kinds in one script:
@@ -211,64 +217,96 @@ A realistic mix of both annotation kinds in one script:
   HTTP Server configuration the container cannot reach.
 * **ERROR** — `from java.net import URL` is removed (breadcrumb) and the
   `URL(endpoint).openConnection()` use is stamped: no JVM in the container.
+* **Tier 1** — the standard-library `json` import passes through, so parsing the
+  response body (`json.loads(...)`) and storing a field with `setReleaseVariable`
+  need no manual fix-up.
 
-## `deploy`
+## 08_java_interop
 
-**Files:** [`examples/jython/deploy.py`](../examples/jython/deploy.py)
-→ [`examples/python3/deploy.py`](../examples/python3/deploy.py)
+**Files:** [`examples/jython/08_java_interop.py`](../examples/jython/08_java_interop.py)
+→ [`examples/python3/08_java_interop.py`](../examples/python3/08_java_interop.py)
+&nbsp;·&nbsp; **Result:** 9 TODO / 13 ERROR
+
+The "don't use Java" case, at its broadest. A grab-bag of the Java standard-library
+classes Release scripts reach for — `Date` / `Calendar` / `SimpleDateFormat`,
+`Properties`, `Arrays`, `UUID`, `MessageDigest`, `Pattern`, `BigDecimal` and
+`System`. None of it runs in the container, so the migrator:
+
+* drops the nine `from java.* import ...` lines (each leaves a **TODO** breadcrumb), and
+* stamps **every** Java use — constructor calls, factory methods
+  (`Calendar.getInstance()`), constant references (`Calendar.DAY_OF_MONTH`) and even a
+  fully-qualified inline reference (`java.text.SimpleDateFormat(...)`) — with an
+  **ERROR**.
+
+Each block names its Python replacement (`datetime`, `dict`, `list`, `uuid`,
+`hashlib`, `re`, `decimal`, `os.environ`); the markers form a checklist of every spot
+to revisit.
+
+## 09_deploy_pipeline
+
+**Files:** [`examples/jython/09_deploy_pipeline.py`](../examples/jython/09_deploy_pipeline.py)
+→ [`examples/python3/09_deploy_pipeline.py`](../examples/python3/09_deploy_pipeline.py)
 &nbsp;·&nbsp; **Result:** 3 TODO / 0 ERROR
 
-A compact, representative task that exercises several rules at once: free `release`
-object injection, `print` conversion, `releaseVariables` read/write helpers, the
-`releaseApi` loop passing through, plus removed imports (`java.util.Date` and
-`HttpRequest`) and a flagged `HttpRequest` call. A good "what does a typical task
-look like after migration" reference.
+A compact, representative capstone that exercises several rules at once: free
+`release` object injection, `print` conversion, `releaseVariables` read/write helpers,
+the `releaseApi` loop passing through, plus removed imports (`java.util.Date` and
+`HttpRequest`) and a flagged `HttpRequest` call. A good "what does a typical task look
+like after migration" reference.
 
 ---
 
 ## Template-as-code YAML
 
-**Files:** [`examples/templates/jython_template.yaml`](../examples/templates/jython_template.yaml)
-→ [`examples/templates/python3_template.yaml`](../examples/templates/python3_template.yaml)
+**Files:** [`examples/templates/jython/`](../examples/templates/jython/)
+→ [`examples/templates/python3/`](../examples/templates/python3/)
 
 Release's **YAML: Template as code** view exports a whole template, embedding each
-Jython task's script as a literal block scalar. Point the migrator at the `.yaml`
-(or `.yml`) file and it converts the template **in place**:
+Jython task's script as a literal block scalar. Point the migrator at a `.yaml` (or
+`.yml`) file — or the whole directory — and it converts each template **in place**:
 
 ```bash
-jython2py3 migrate examples/templates/jython_template.yaml -o migrated.yaml
-jython2py3 migrate examples/templates/jython_template.yaml --diff   # preview first
+jython2py3 migrate examples/templates/jython/ -o examples/templates/python3/
+jython2py3 migrate examples/templates/jython/01_mixed_task_types.yaml --diff   # preview
 ```
 
 What changes — and what is preserved:
 
-* Every task whose `type` is exactly `xlrelease.ScriptTask` becomes
+* Only tasks whose `type` is **exactly** `xlrelease.ScriptTask` become
   `containerPython.PythonTask`. Both task types share the same `script` property, so
   the embedded body just moves across.
 * The `script:` body is migrated with the **exact same rules** used for standalone
   `.py` files (any `# TODO` / `# ERROR` markers land as comments inside the block).
 * Everything else is untouched: key order, comments, the `|-` block style, anchors,
-  and secret `!value` tags. Tasks of any other type are left as-is.
+  and secret `!value` tags. **Every other task is left exactly as-is** — manual, gate
+  and notification tasks, tasks that are already `containerPython.PythonTask`, group
+  wrappers, and non-script fields such as a task `description` (even when it contains
+  Python-2-looking text).
+
+Three templates exercise this:
+
+| Template | Shows |
+| -------- | ----- |
+| [`01_mixed_task_types`](../examples/templates/jython/01_mixed_task_types.yaml) | one script task beside a manual task, a gate task and an already-migrated Python task — only the script task changes (1 converted) |
+| [`02_release_pipeline`](../examples/templates/jython/02_release_pipeline.yaml) | a script task in each of two phases, interleaved with manual/notification tasks (2 converted) |
+| [`03_nested_tasks`](../examples/templates/jython/03_nested_tasks.yaml) | a script task **nested inside a `ParallelGroup`** is still found and converted (2 converted) |
 
 ```diff
-     - name: New task
+     - name: Summarise release
 -      type: xlrelease.ScriptTask
 +      type: containerPython.PythonTask
        script: |-
 -        print "Release:", release.title, "(", release.status, ")"
--        print "Phase:", phase.title
-+        release = getCurrentRelease()
-+        phase = getCurrentPhase()
-+        print("Release:", release.title, "(", release.status, ")")
-+        print("Phase:", phase.title)
-
 -        releaseVariables["migratedBy"] = "jython2py3"
--        print "migratedBy =", releaseVariables["migratedBy"]
++        release = getCurrentRelease()
++        print("Release:", release.title, "(", release.status, ")")
 +        setReleaseVariable("migratedBy", "jython2py3")
-+        print("migratedBy =", getReleaseVariable("migratedBy"))
    scriptUsername: admin
-   scriptUserPassword: !value "xlrelease_Release_two_scriptUserPassword"
+   scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+     # ... the manual task below is left untouched, prose `print "..."` and all:
+     - name: Approve build
+       type: xlrelease.Task
 ```
 
-The CLI summary reports how many tasks were converted alongside the usual TODO/ERROR
-counts. Re-import the migrated file through the same Template-as-code view.
+The CLI summary reports how many tasks were converted (per file) alongside the usual
+TODO/ERROR counts. Re-import the migrated file through the same Template-as-code view.

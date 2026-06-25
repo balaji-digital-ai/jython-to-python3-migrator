@@ -214,56 +214,15 @@ No other module changes. Each rule is isolated, so one rule cannot break another
 
 ```bash
 uv sync --extra dev           # create .venv with dev tools from the lockfile
-uv run pytest                 # run all tests (the live test self-skips with no server)
+uv run pytest                 # run all tests (offline; no Release server needed)
 uv run pytest -m unit         # fast unit tests only
 uv run pytest -m integration  # end-to-end migration tests
 uv run ruff check .           # lint
 ```
 
 The equivalent pip workflow is `pip install -e ".[dev]"` then `pytest` / `ruff
-check .`. A plain test run needs no Release server and no Release API client — the
-live test self-skips — so it passes offline on a fresh `uv sync --extra dev`.
+check .`. Every test runs offline — no Release server or API client required — so it
+passes on a fresh `uv sync --extra dev`.
 
 Tests live in `tests/unit` (one file per fixer) and `tests/integration`
 (whole-script migrations of `examples/`).
-
-### Live-server test (migrate **and run**)
-
-`tests/integration/test_live_migration.py` goes one step further than the offline
-tests: it migrates `examples/jython/current_context.py` and then **executes the
-migrated Python 3** as a `containerPython.PythonTask` on a real Digital.ai Release
-server, proving the converted script has no migration *or* runtime issues.
-
-It needs the Release API client (Python 3.10+) and a running server with a container
-runner:
-
-```bash
-uv sync --extra dev --extra integration    # adds the Release API client
-
-# run the live test (defaults to http://localhost:5516, admin/admin)
-uv run pytest tests/integration/test_live_migration.py -v
-```
-
-The test **skips automatically** when no server is reachable, so a plain `pytest`
-run still passes offline.
-
-Point it at another server with CLI options or environment variables:
-
-| Option | Env var | Default |
-| ------ | ------- | ------- |
-| `--release-url` | `RELEASE_URL` | `http://localhost:5516` |
-| `--release-username` | `RELEASE_USERNAME` | `admin` |
-| `--release-password` | `RELEASE_PASSWORD` | `admin` |
-| `--release-token` | `RELEASE_TOKEN` | _(overrides user/password)_ |
-
-The container task calls back into the API as the release's **"Run as user"**.
-Those credentials default to the primary ones but can be set separately via
-`RELEASE_SCRIPT_USER` / `RELEASE_SCRIPT_PASSWORD` — without a valid run-as user the
-migrated script's `getCurrent*` / `get*Variable` helpers fail with a "Cannot
-connect to Release API" error.
-
-```bash
-uv run pytest tests/integration/test_live_migration.py \
-  --release-url https://release.example.com \
-  --release-token "$MY_PAT" -v
-```
