@@ -1,34 +1,34 @@
 # Example 05 - The release, folder and global variable maps (guide section 8)
 #
-# Each plain read/write becomes the matching get*/set* helper in Python 3. The Java
-# HashMap, the augmented assignment, and iterating the map itself have no one-to-one
-# container equivalent, so they are flagged (ERROR and TODOs respectively) for a human
-# to resolve.
+# Plain reads/writes become get*/set* helpers. The Java HashMap, augmented assignment,
+# and iterating the map have no getter/setter form, so they are flagged ERROR/TODO.
 from java.util import HashMap
+
+# Seed the variables this example reads so it runs standalone.
+releaseVariables["buildNumber"] = "42"
+releaseVariables["targetEnv"] = "PROD"
+releaseVariables["deployCount"] = 0
+globalVariables["global.pipelineOwner"] = "platform-team"
 
 # Read inputs straight from the release variable map.
 buildNumber = releaseVariables["buildNumber"]
 targetEnv = releaseVariables["targetEnv"]
 
-# The Jython way to build a map value (java.util.HashMap) - does not run in the
-# container ...
+# A java.util.HashMap does not run in the container ...
 legacyMeta = HashMap()
 legacyMeta.put("build", buildNumber)
 
 # ... a plain dict is the portable choice, stored back as a Map variable.
 releaseVariables["buildMetadata"] = {"build": buildNumber, "env": targetEnv}
 
-# Folder- and global-scoped variables use their own maps; their keys carry the
-# required `folder.` / `global.` prefix (guide section 8), which the rewrite preserves.
+# Folder- and global-scoped maps; keys keep their folder. / global. prefix.
 folderVariables["folder.lastGoodBuild"] = buildNumber
 owner = globalVariables["global.pipelineOwner"]
 
-# A running counter: augmented assignment is a read *and* a write, so it cannot
-# collapse into a single getter/setter call.
+# Augmented assignment is a read and a write, so it has no single getter/setter form.
 releaseVariables["deployCount"] += 1
 
-# Iterating the map itself (rather than a single key) has no getter/setter form, so
-# the whole loop header is flagged for a manual rewrite.
+# Iterating the whole map has no getter/setter form either.
 for varName in releaseVariables:
     print "configured variable:", varName
 

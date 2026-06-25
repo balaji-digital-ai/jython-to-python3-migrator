@@ -16,8 +16,6 @@ spec:
         buildNumber = releaseVariables["buildNumber"]
         releaseVariables["artifactPath"] = "/artifacts/%s/app.zip" % buildNumber
         print "Prepared build", buildNumber
-      scriptUsername: admin
-      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
     # Manual task -> untouched.
     - name: Approve deployment
       type: xlrelease.Task
@@ -31,13 +29,13 @@ spec:
       script: |-
         for activeTask in releaseApi.getActiveTasks(release.id):
             print "active:", activeTask.title
-      scriptUsername: admin
-      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
     # Notification task -> untouched.
     - name: Notify team
       type: xlrelease.NotificationTask
       addresses:
       - team@example.com
       subject: Deployment complete
+  scriptUsername: admin
+  scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
   riskProfile: Default risk profile
   author: admin

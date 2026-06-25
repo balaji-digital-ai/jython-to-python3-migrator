@@ -10,8 +10,10 @@ from __future__ import annotations
 from fissix import fixer_base
 from fissix.fixer_util import BlankLine
 from fissix.pgen2 import token
+from fissix.pygram import python_symbols as syms
 
 from .. import TODO_MARKER
+from .fix_java_date import is_java_util_date_import
 
 _JAVA_ROOTS = {"java", "javax"}
 
@@ -32,6 +34,11 @@ class FixJavaImports(fixer_base.BaseFix):
         )
         if first_name is None or first_name.value not in _JAVA_ROOTS:
             return None  # an ordinary import - leave it alone
+
+        # `from java.util import Date` is owned by fix_java_date (-> `import datetime`),
+        # not dropped with a breadcrumb like the other java.* imports.
+        if node.type == syms.import_from and is_java_util_date_import(node):
+            return None
 
         # The import's own text, *without* its prefix (which may hold preceding
         # comments/blank lines); embedding the prefix would break the breadcrumb.

@@ -118,10 +118,10 @@ spec:
     - name: Java
       type: xlrelease.ScriptTask
       script: |-
-        from java.util import Date
-        now = Date()
+        from java.util import Calendar
+        now = Calendar.getInstance()
 """
     result = migrate_yaml(template)
     assert result.tasks_converted == 1
-    assert result.errors  # Date() is flagged as a Java-usage ERROR
-    assert any("Date" in err for err in result.errors)
+    assert result.errors  # Calendar.getInstance() is flagged as a Java-usage ERROR
+    assert any("Calendar" in err for err in result.errors)

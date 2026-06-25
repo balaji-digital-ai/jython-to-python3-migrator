@@ -23,13 +23,13 @@ PYTHON3_DIR = _ROOT / "examples" / "python3"
 EXPECTED = {
     "01_reserved_objects.py": (0, 0),       # reserved objects + API + vars; fully runnable
     "02_python2_syntax.py": (0, 0),         # pure Python 2 -> 3 syntax pass; runs as-is
-    "03_release_orchestration.py": (0, 0),  # API create flow; API imports pass through
+    "03_release_orchestration.py": (0, 0),  # API create flow; java.util.Date -> datetime
     "04_release_report.py": (0, 0),         # read/update via API objects; fully runnable
     "05_release_variables.py": (3, 1),      # java-import + aug-assign + map iteration; HashMap use
     "06_variable_edge_cases.py": (3, 0),    # method-call + .keys() + del on a variable map
-    "07_http_request.py": (3, 1),           # HttpRequest (import+call) + java import; java URL use
-    "08_java_interop.py": (9, 13),          # nine java imports; thirteen Java uses
-    "09_deploy_pipeline.py": (3, 0),        # java-import breadcrumb + HttpRequest (import+call)
+    "07_http_request.py": (1, 0),           # HttpRequest call (reserved object); json pass-through
+    "08_java_interop.py": (8, 9),           # eight java imports; nine Java uses (Date -> datetime)
+    "09_deploy_pipeline.py": (2, 0),        # java-import breadcrumb + HttpRequest call
 }
 
 EXAMPLES = sorted(p.name for p in JYTHON_DIR.glob("*.py"))

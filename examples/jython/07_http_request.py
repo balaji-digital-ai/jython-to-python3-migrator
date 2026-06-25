@@ -1,28 +1,22 @@
-# Example 07 - HttpRequest and a Java network fallback (guide sections 9 and 11)
+# Example 07 - HttpRequest health check (guide section 9)
 #
-# A health-check task that calls an external API. In Jython this used the bundled
-# `HttpRequest` helper (parsing the JSON response), plus `java.net` for a fallback
-# ping. The migrator flags the HttpRequest call with a TODO (rewrite with `requests`)
-# and the Java `URL` use with an ERROR (no JVM in the container) - a realistic mix of
-# both annotation kinds. The `json` standard-library module migrates unchanged.
-from xlrelease.HttpRequest import HttpRequest
-from java.net import URL
+# A health-check task using the bundled HttpRequest helper. The migrator flags the
+# HttpRequest call with a TODO (rewrite with requests). The json module migrates
+# unchanged.
 import json
+
+# Seed the variable this example reads so it runs standalone.
+releaseVariables["healthEndpoint"] = "https://www.githubstatus.com"
 
 endpoint = releaseVariables["healthEndpoint"]
 
-# Tier 2 TODO: the original pulls its URL/credentials from a shared HTTP Server
-# configuration, so the rewrite needs a human decision.
-response = HttpRequest({"url": endpoint}).get("/health")
+# Tier 2 TODO: URL/credentials come from a shared HTTP Server config - needs a human.
+response = HttpRequest({"url": endpoint}).get("/api/v2/status.json")
 if not response.isSuccessful():
     raise Exception("Health check failed: %d" % response.getStatus())
 
-# `json` is portable, so parsing the response body and storing a field is Tier 1.
+# json is portable, so parsing the body and storing a field is Tier 1.
 payload = json.loads(response.getResponse())
 releaseVariables["healthStatus"] = payload["status"]
-
-# Tier 2 ERROR: opening the URL through Java cannot run in the container.
-connection = URL(endpoint).openConnection()
-print "Ping status", connection.getResponseCode()
 
 print "Health check OK for", endpoint

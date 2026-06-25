@@ -16,8 +16,6 @@ spec:
         print "Release:", release.title, "(", release.status, ")"
         releaseVariables["migratedBy"] = "jython2py3"
         print "migratedBy =", releaseVariables["migratedBy"]
-      scriptUsername: admin
-      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
     # A manual task -> left untouched. Its Jython-looking description is prose, not a
     # script, so the migrator must NOT rewrite it.
     - name: Approve build
@@ -39,7 +37,7 @@ spec:
       script: |-
         print("already migrated")
         setReleaseVariable("published", True)
-      scriptUsername: admin
-      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+  scriptUsername: admin
+  scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
   riskProfile: Default risk profile
   author: admin

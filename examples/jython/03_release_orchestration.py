@@ -1,20 +1,35 @@
-# Example 03 - Provisioning a release through the API objects (Tier 1, runnable)
+# Example 03 - Provisioning a release through the API objects
 #
-# Create-template -> add-phase -> add-task -> start-release, end to end, using the
-# Release API objects (templateApi / phaseApi / taskApi / releaseApi).
-#
-# The `com.xebialabs.xlrelease.*` API imports are valid in *both* Jython and the
-# Python 3 client, so the migrator leaves them untouched - only the Python 2 print
-# statements and the releaseVariables map accesses change.
-from com.xebialabs.xlrelease.domain.release import Release
-from com.xebialabs.xlrelease.domain.forms import CreateRelease
+# Create template -> add phase -> add task -> start release, using the reserved API
+# objects (templateApi / phaseApi / taskApi / releaseApi). The java.util.Date schedule
+# is auto-converted to datetime, so this migrates with no markers left.
 
-# Inputs come from this release's variable map.
+# Java classes, imported by their XL Release package names.
+from com.xebialabs.xlrelease.domain import Release
+from com.xebialabs.xlrelease.domain.status import ReleaseStatus
+from com.xebialabs.xlrelease.api.v1.forms import CreateRelease
+from java.util import Date
+
+# Seed a couple of sample inputs into the reserved releaseVariables map.
+releaseVariables["appName"] = "petclinic"
+releaseVariables["targetEnv"] = "production"
+
+# Read the inputs back from the map.
 appName = releaseVariables["appName"]
 targetEnv = releaseVariables["targetEnv"]
 
-# 1. Create a template to hold the new pipeline.
-template = templateApi.createTemplate(Release(title="Deploy %s" % appName))
+# 1. Create a template (status must be TEMPLATE, with a scheduled start and due date).
+scheduledStart = Date()
+dueDate = Date(scheduledStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+template = templateApi.createTemplate(
+    Release(
+        title="Deploy %s" % appName,
+        status=ReleaseStatus.TEMPLATE,
+        scheduledStartDate=scheduledStart,
+        dueDate=dueDate,
+    ),
+    None,
+)
 print "Created template", template.id
 
 # 2. Add a phase to the template.

@@ -22,6 +22,7 @@ from __future__ import annotations
 CUSTOM_FIXERS: list[str] = [
     "jython2py3.fixers.fix_release_vars",      # Tier 1: variable dicts -> helper calls
     "jython2py3.fixers.fix_release_var_refs",  # Tier 2: flag leftover variable-map uses
+    "jython2py3.fixers.fix_java_date",         # Tier 1: java.util.Date -> datetime
     "jython2py3.fixers.fix_java_imports",      # Tier 1: drop java.* / javax.* imports
     "jython2py3.fixers.fix_java_usage",        # Tier 2: flag java.* usage as an error
     "jython2py3.fixers.fix_http_request",      # Tier 2: flag HttpRequest -> requests

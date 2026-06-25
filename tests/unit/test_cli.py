@@ -60,7 +60,7 @@ def test_in_place_and_output_conflict(tmp_path):
 @pytest.mark.unit
 def test_report_written(tmp_path):
     src = tmp_path / "in.py"
-    src.write_text('from java.util import Date\n', encoding="utf-8")
+    src.write_text('from java.util import Calendar\n', encoding="utf-8")
     report = tmp_path / "report.json"
 
     main(["migrate", str(src), "--dry-run", "--report", str(report)])

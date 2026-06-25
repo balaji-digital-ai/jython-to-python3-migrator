@@ -29,6 +29,7 @@ from fissix.pgen2 import token
 from fissix.pygram import python_symbols as syms
 
 from .._cst import add_error, enclosing_statement
+from .fix_java_date import JAVA_DATE_NAME
 
 _JAVA_ROOTS = {"java", "javax"}
 
@@ -50,6 +51,8 @@ class FixJavaUsage(fixer_base.BaseFix):
         for node in tree.pre_order():
             if node.type == syms.import_from and _is_java_module(node):
                 self._java_names.update(_imported_names(node))
+        # `Date` is converted to `datetime` by fix_java_date, not flagged as an error.
+        self._java_names.discard(JAVA_DATE_NAME)
 
     def transform(self, node, results):
         for leaf in list(node.leaves()):

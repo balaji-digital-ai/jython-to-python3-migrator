@@ -47,7 +47,7 @@ def test_variable_rules_applied(migrated):
 
 @pytest.mark.integration
 def test_java_import_removed(migrated):
-    assert "from java.util import Date" in migrated.migrated  # only in the breadcrumb
+    assert "from java.util import HashMap" in migrated.migrated  # only in the breadcrumb
     code_lines = [
         ln for ln in migrated.migrated.splitlines()
         if ln.strip() and not ln.lstrip().startswith("#")
@@ -63,6 +63,7 @@ def test_reserved_object_injected(migrated):
 
 @pytest.mark.integration
 def test_tier2_items_flagged(migrated):
-    # Only HttpRequest remains Tier 2: its import + its call are flagged (2 TODOs).
-    assert migrated.todo_count == 3  # java-import breadcrumb + HttpRequest import + call
+    # HttpRequest is now a reserved object (no import), so only its call is flagged,
+    # alongside the java.util.HashMap import breadcrumb (2 TODOs total).
+    assert migrated.todo_count == 2  # java-import breadcrumb + HttpRequest call
     assert any("HttpRequest" in todo for todo in migrated.todos)

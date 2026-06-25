@@ -18,13 +18,11 @@ spec:
         script: |-
           release = getCurrentRelease()
           completed = 0
-          for phase in phaseApi.getPhases(release.id):
-              for task in taskApi.getTasks(phase.id):
-                  if task.status == "COMPLETED":
+          for phase in release.getPhases():
+              for task in phase.getTasks():
+                  if str(task.status) == "COMPLETED":
                       completed += 1
           setReleaseVariable("completedTasks", completed)
-        scriptUsername: admin
-        scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
       - name: Manual check
         type: xlrelease.Task
         description: Verify alongside the script task.
@@ -34,7 +32,7 @@ spec:
       script: |-
         release = getCurrentRelease()
         print("Finalizing", release.title)
-      scriptUsername: admin
-      scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
+  scriptUsername: admin
+  scriptUserPassword: !value "xlrelease_Release_scriptUserPassword"
   riskProfile: Default risk profile
   author: admin

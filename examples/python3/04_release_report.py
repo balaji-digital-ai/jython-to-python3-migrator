@@ -1,42 +1,38 @@
 # Example 04 - Reading and updating a release through the API objects (Tier 1, runnable)
 #
-# A reporting/maintenance task built entirely on the predefined API objects
-# (`releaseApi`, `phaseApi`, `taskApi`, `searchApi`) and reserved objects. Everything
-# here is Tier 1 - the Python 2 `print` statements and `releaseVariables` accesses are
-# rewritten and the API objects pass through unchanged - so the output runs as-is.
+# A reporting/maintenance task built on the reserved release object and the predefined
+# taskApi. All Tier 1, so the output runs as-is after migration.
 release = getCurrentRelease()
 print("Release Summary")
 
 print("Release Name : %s" % release.title)
 print("Status       : %s" % release.status)
 
-# Validate inputs up front; `raise` is unchanged from Python 2 to 3.
+# Seed a sample input, then validate it; raise is unchanged from Python 2 to 3.
+setReleaseVariable("environment", "QA")
 environment = getReleaseVariable("environment")
 if environment not in ["DEV", "QA", "PROD"]:
     raise Exception("Invalid environment: %s" % environment)
 
-# Walk every phase and its tasks, tallying completion.
+# Walk every phase and its tasks: tally completion and annotate "Deploy" tasks.
 completed = 0
 pending = 0
-for phase in phaseApi.getPhases(release.id):
-    for task in taskApi.getTasks(phase.id):
+for phase in release.getPhases():
+    for task in phase.getTasks():
         print("%s : %s" % (task.title, task.status))
-        if task.status == "COMPLETED":
+        if str(task.status) == "COMPLETED":
             completed += 1
         else:
             pending += 1
-
-# Find specific tasks by title and annotate them - a task mutation plus a write-back.
-for deployTask in searchApi.searchTasksByTitle("Deploy"):
-    deployTask.description = "Verified by automation"
-    taskApi.updateTask(deployTask)
+        if "Deploy" in task.title:
+            task.description = "Verified by automation"
+            taskApi.updateTask(task)
 
 # Store the tallies back as release variables (plain sets -> setReleaseVariable).
 setReleaseVariable("completedTasks", completed)
 setReleaseVariable("pendingTasks", pending)
 
-# Output properties of the surrounding task. These migrate unchanged as plain
-# variables; in a Python 3 Container task they map to its result output properties.
+# Plain result variables; in a Python 3 Container task these map to its outputs.
 result = "SUCCESS"
 result_2 = "%d completed" % completed
 result_3 = "%d pending" % pending

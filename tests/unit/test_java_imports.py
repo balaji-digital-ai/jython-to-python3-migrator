@@ -4,7 +4,7 @@ import pytest
 
 @pytest.mark.unit
 def test_from_java_import_removed(migrate):
-    result = migrate("from java.util import Date\n")
+    result = migrate("from java.util import Calendar\n")
     assert result.todo_count == 1
     # no executable code line survives - only the breadcrumb comment
     code_lines = [
@@ -13,7 +13,7 @@ def test_from_java_import_removed(migrate):
     ]
     assert code_lines == []
     # the original import text is quoted inside the breadcrumb
-    assert "from java.util import Date" in result.migrated
+    assert "from java.util import Calendar" in result.migrated
 
 
 @pytest.mark.unit

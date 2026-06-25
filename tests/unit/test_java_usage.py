@@ -13,11 +13,11 @@ from jython2py3 import ERROR_MARKER
 
 @pytest.mark.unit
 def test_imported_name_used_is_flagged(migrate):
-    result = migrate("from java.util import Date\nnow = Date()\n")
+    result = migrate("from java.util import Calendar\nnow = Calendar.getInstance()\n")
     assert result.error_count == 1
-    assert any("Date" in e for e in result.errors)
+    assert any("Calendar" in e for e in result.errors)
     # the offending line is left intact (we never silently delete code)
-    assert "now = Date()" in result.migrated
+    assert "now = Calendar.getInstance()" in result.migrated
     # and it carries an ERROR marker, distinct from a TODO
     assert ERROR_MARKER in result.migrated
 
@@ -41,9 +41,9 @@ def test_fully_qualified_reference_is_flagged(migrate):
 @pytest.mark.unit
 def test_multiple_usages_each_flagged(migrate):
     src = (
-        "from java.util import Date, Calendar\n"
-        "now = Date()\n"
+        "from java.util import Calendar, Properties\n"
         "cal = Calendar.getInstance()\n"
+        "props = Properties()\n"
     )
     result = migrate(src)
     assert result.error_count == 2
@@ -53,15 +53,15 @@ def test_multiple_usages_each_flagged(migrate):
 def test_import_line_itself_is_not_double_flagged(migrate):
     # The import is handled by fix_java_imports (a TODO breadcrumb); the usage rule
     # must not also stamp an ERROR on the import line.
-    result = migrate("from java.util import Date\n")  # imported but never used
+    result = migrate("from java.util import Calendar\n")  # imported but never used
     assert result.error_count == 0
     assert result.todo_count == 1
 
 
 @pytest.mark.unit
 def test_attribute_named_like_java_symbol_is_safe(migrate):
-    # `obj.Date` is a member access on a local object, not the Java class.
-    result = migrate("from java.util import Date\nx = obj.Date\n")
+    # `obj.Calendar` is a member access on a local object, not the Java class.
+    result = migrate("from java.util import Calendar\nx = obj.Calendar\n")
     assert result.error_count == 0
 
 
@@ -75,7 +75,8 @@ def test_non_java_code_has_no_errors(migrate):
 def test_error_inside_indented_block_keeps_valid_indentation(migrate):
     # Annotating the *first* statement of a block must not dedent it: the indentation
     # of that line lives in the preceding INDENT token, not the statement prefix.
-    result = migrate("from java.util import Date\nif True:\n    now = Date()\n")
+    result = migrate(
+        "from java.util import Calendar\nif True:\n    now = Calendar.getInstance()\n")
     assert result.error_count == 1
-    assert "    now = Date()" in result.migrated  # still indented under the `if`
+    assert "    now = Calendar.getInstance()" in result.migrated  # still indented under the `if`
     ast.parse(result.migrated)  # the whole module must still parse

@@ -1,13 +1,16 @@
 # Example 06 - Variable-map access patterns that need a manual rewrite (guide section 8)
 #
-# Mixes a Tier-1 rewrite - the free `task` reserved object becomes
-# `task = getCurrentTask()`, and a plain variable read becomes `getReleaseVariable(...)`
-# - with the Tier-2 variable-map shapes that have no single getter/setter form: a method
-# call on a looked-up value, enumerating the map with `.keys()`, and a `del`. Those three
-# are left intact and flagged with a TODO marker for a manual rewrite.
+# Mixes Tier-1 rewrites (reserved task object, a plain releaseVariables read) with
+# Tier-2 shapes that have no getter/setter form - a method call on a looked-up value,
+# .keys() enumeration, and a del - which are left intact and flagged TODO.
 
-# Tier 1: a free `task` reserved object gets its helper injected at the top.
+# Tier 1: the reserved task object gets its helper injected at the top.
 print "Cleaning up after task:", task.title
+
+# Seed the variables this example reads so it runs standalone.
+releaseVariables["buildNumber"] = "42"
+releaseVariables["artifacts"] = ["app-1.0.jar"]
+releaseVariables["scratchValue"] = "temp"
 
 # Tier 1: a plain read becomes getReleaseVariable("buildNumber").
 buildNumber = releaseVariables["buildNumber"]
