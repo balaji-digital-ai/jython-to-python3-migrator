@@ -137,9 +137,9 @@ jython2py3 mcp migrate <TEMPLATE_ID> -o migrated.json # pull + migrate to a file
 ```
 
 This CLI is the MCP **client**; it never holds your Release credentials — those live on
-the MCP server. Full setup (starting the server, connecting, testing, re-importing,
-troubleshooting), written for someone new to MCP, is in
-**[`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md)**.
+the MCP server. The full how-to (connecting, listing, migrating, re-importing,
+troubleshooting) is in **[`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md)**; for the
+MCP server itself see the [official docs](https://docs.digital.ai/release/docs/how-to/release-mcp-server).
 
 ---
 
