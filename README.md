@@ -120,27 +120,20 @@ file via the same Template-as-code view. A worked example is in
 
 ## Pull templates straight from Release (MCP)
 
-The migrator can pull a template **directly from a running Digital.ai Release instance**
-through the official [Release MCP server](https://hub.docker.com/r/xebialabs/dai-release-mcp)
-and migrate its Jython tasks (the same rules as `.py`/`.yaml`), writing the result to a JSON
-file. It is **read-only against Release** — your originals are never touched. Use it to
-**discover and preview** migrations across your instance:
+Instead of exporting a YAML file by hand, the migrator can pull a template **directly
+from a running Digital.ai Release instance** via the official
+[Release MCP server](https://hub.docker.com/r/xebialabs/dai-release-mcp), then preview or
+migrate its Jython tasks. It is **read-only** — your originals in Release are never touched.
 
 ```bash
-uv sync --extra mcp                                   # one-time: install the MCP client SDK
-export RELEASE_MCP_URL=http://localhost:8000/mcp      # point at your running MCP server
+uv sync --extra mcp                              # one-time: install the MCP client SDK
+export RELEASE_MCP_URL=http://localhost:8000/mcp # point at your MCP server
 
-jython2py3 mcp list                                   # list templates (id <tab> title)
-jython2py3 mcp migrate <TEMPLATE_ID> --diff           # preview what would change
-jython2py3 mcp migrate <TEMPLATE_ID> -o migrated.json # + write the converted JSON / report
+jython2py3 mcp list                              # list templates
+jython2py3 mcp migrate <TEMPLATE_ID> --diff      # preview what would change
 ```
 
-To produce a **re-importable** template, use the offline Template-as-code YAML path above
-(`jython2py3 migrate template.yaml`): Release's *Import Template* dialog accepts YAML/`.xlr`/
-zip, not the MCP JSON. This CLI is the MCP **client**; it never holds your Release
-credentials — those live on the MCP server. The full how-to is in
-**[`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md)**; for the MCP server itself see the
-[official docs](https://docs.digital.ai/release/docs/how-to/release-mcp-server).
+Full setup, auth, and re-import notes: **[`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md)**.
 
 ---
 
