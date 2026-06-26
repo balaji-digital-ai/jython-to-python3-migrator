@@ -32,22 +32,15 @@ def _template() -> dict:
 
 
 class FakeClient:
-    def __init__(self):
-        self.created: list[dict] = []
-
     def list_tools(self):
-        return ["get_template", "list_templates", "create_template"]
+        return ["get_template", "list_templates"]
 
     def list_templates(self, **_):
         return [{"id": "Folder/Release1", "title": "Deploy"}]
 
-    def get_template(self, template_id, **_):
-        assert template_id == "Folder/Release1"
+    def get_template(self, name_or_id, **_):
+        assert name_or_id == "Folder/Release1"
         return _template()
-
-    def create_template(self, template, **_):
-        self.created.append(template)
-        return {"id": "Folder/Release2", "title": template.get("title")}
 
 
 @pytest.fixture
@@ -84,8 +77,6 @@ def test_mcp_migrate_to_file(fake_client, tmp_path, capsys):
     task = migrated["phases"][0]["tasks"][0]
     assert task["type"] == PYTHON3_TASK_TYPE
     assert 'print("hi", release.title)' in task["script"]
-    # Nothing was pushed without --push.
-    assert fake_client.created == []
 
 
 @pytest.mark.unit
@@ -94,24 +85,6 @@ def test_mcp_migrate_stdout(fake_client, capsys):
     assert code == 0
     out = capsys.readouterr().out
     assert PYTHON3_TASK_TYPE in out
-
-
-@pytest.mark.unit
-def test_mcp_migrate_push_creates_new_template(fake_client, capsys):
-    code = main(["mcp", "migrate", "Folder/Release1", "--push"])
-    assert code == 0
-    assert len(fake_client.created) == 1
-    pushed = fake_client.created[0]
-    # A fresh template: original id stripped, title marked, script migrated.
-    assert "id" not in pushed
-    assert pushed["title"] == "Deploy (migrated to Python 3)"
-    assert pushed["phases"][0]["tasks"][0]["type"] == PYTHON3_TASK_TYPE
-
-
-@pytest.mark.unit
-def test_mcp_migrate_push_custom_title(fake_client):
-    main(["mcp", "migrate", "Folder/Release1", "--push", "--push-title", "Deploy v2"])
-    assert fake_client.created[0]["title"] == "Deploy v2"
 
 
 @pytest.mark.unit

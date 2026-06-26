@@ -35,13 +35,13 @@ in front of your Release server and exposes Release operations as MCP tools, e.g
 | ---- | ------------ |
 | `list_templates` | list the release templates |
 | `get_template` | fetch one template (phases, tasks, and each task's `script`) |
-| `create_template` | create a new template |
 | `list_releases`, `get_release`, … | (many more — releases, variables, configs, tasks) |
 
 The full tool list is in the
-[official docs](https://docs.digital.ai/release/docs/how-to/release-mcp-server). For this
-migrator we only use **`list_templates`**, **`get_template`** and (with `--push`)
-**`create_template`**.
+[official docs](https://docs.digital.ai/release/docs/how-to/release-mcp-server). This
+migrator uses only the two **read-only** tools it needs — **`list_templates`** and
+**`get_template`** — to pull templates. It does **not** write back over MCP; see
+[§8](#8-creating-a-migrated-template-in-release-re-import) for why and how you re-import.
 
 ### How the pieces fit together
 
@@ -52,7 +52,7 @@ migrator we only use **`list_templates`**, **`get_template`** and (with `--push`
  └───────────────────────┘   templates (JSON)  │ -mcp  (Docker)       │   templates      └─────────────────┘
         │                                       └──────────────────────┘
         ▼  migrate Jython → Python 3 (same rules as the .py / .yaml paths)
-   migrated template JSON  ──(optional --push: create_template)──▶ back to Release
+   migrated template JSON file  ──(you re-import it as a new template)──▶ back to Release
 ```
 
 Key point: **this CLI never holds your Release credentials.** The MCP server does.
@@ -70,7 +70,7 @@ all its behaviour are unchanged.
 
 | File | Purpose |
 | ---- | ------- |
-| [`src/jython2py3/mcp/client.py`](../src/jython2py3/mcp/client.py) | The MCP client: connects to the server over HTTP and calls `list_templates` / `get_template` / `create_template`. The `mcp` SDK is imported lazily, so it is only needed when you actually connect. |
+| [`src/jython2py3/mcp/client.py`](../src/jython2py3/mcp/client.py) | The MCP client: connects to the server over HTTP and calls the read-only `list_templates` / `get_template` tools. The `mcp` SDK is imported lazily, so it is only needed when you actually connect. |
 | [`src/jython2py3/mcp/migrate.py`](../src/jython2py3/mcp/migrate.py) | `migrate_template_object(dict)` — converts a template **object** (JSON) using the **exact same rules** as `.py` and `.yaml` migration. Pure & offline. |
 | [`src/jython2py3/_tasks.py`](../src/jython2py3/_tasks.py) | Shared structural walk (`iter_script_tasks`) + the `xlrelease.ScriptTask` → `containerPython.PythonTask` task-type constants, now reused by **both** the YAML path and the MCP path. |
 | [`tests/unit/test_mcp_migrate.py`](../tests/unit/test_mcp_migrate.py), [`test_mcp_client.py`](../tests/unit/test_mcp_client.py), [`test_mcp_cli.py`](../tests/unit/test_mcp_cli.py) | Offline tests — no server, no SDK required (a fake client stands in). |
@@ -90,9 +90,12 @@ all its behaviour are unchanged.
   one-line install hint rather than a stack trace.
 - **The conversion is the same code.** A template migrated over MCP is byte-for-byte the
   same conversion you'd get from the YAML export path — only the *transport* differs.
-- **Read-first, write-only-on-request.** `mcp migrate` saves a local file by default and
-  only writes back to Release when you pass `--push` (and even then it **creates a new
-  template** — it never overwrites the original).
+- **Read-only against Release.** `mcp migrate` only ever *reads* (pulls a template) and
+  writes the converted result to a **local file**. It never modifies anything in Release.
+  You create the new template by re-importing that file ([§8](#8-creating-a-migrated-template-in-release-re-import)) —
+  which keeps your original untouched and the new template fully faithful, because
+  Release's own importer rebuilds it. (The MCP server's `create_template` tool only makes
+  an *empty* template, so it can't faithfully recreate a populated one — hence re-import.)
 
 ---
 
@@ -143,8 +146,9 @@ docker run --rm -i -p 8000:8000 `
 The MCP endpoint URL is then `http://<host>:8000/mcp` (the `/mcp` path is the default mount
 point for streamable-http).
 
-> **Tip — only pulling, never pushing?** Add `-e MCP_READONLY_MODE=true`. The server will
-> reject `create_template` even if you accidentally pass `--push`.
+> **Tip — extra safety:** this CLI only ever *reads* from Release, but if you want a
+> hard guarantee at the server level, add `-e MCP_READONLY_MODE=true` so the server
+> rejects every write tool regardless of what any client asks.
 
 ---
 
@@ -219,8 +223,8 @@ jython2py3 mcp list --tools
 
 ```
 count_releases
-create_template
 get_template
+list_releases
 list_templates
 ...
 ```
@@ -269,41 +273,45 @@ jython2py3 mcp migrate "<TEMPLATE_ID>" -o migrated.json --report report.json
 `report.json` records `tasks_converted`, `transform_count`, `todo_count`, the exact TODO/
 ERROR lines, and `error_count` — same schema as the file-based `--report`.
 
-### Review, then re-import
+### Review the markers
 
-Open `migrated.json`, resolve any `# TODO[jython2py3]` / `# ERROR[jython2py3]` markers in the
-task scripts (these are the parts the tool can't safely auto-convert — `HttpRequest` calls,
-Java interop, etc.), and import the template back into Release the way you normally would
-(UI import, or `--push` below).
+Open `migrated.json` and resolve any `# TODO[jython2py3]` / `# ERROR[jython2py3]` markers in
+the task scripts — these are the parts the tool can't safely auto-convert (`HttpRequest`
+calls, Java interop, etc.).
 
 ---
 
-## 8. Optional: push the migrated template back (`--push`)
+## 8. Creating a migrated template in Release (re-import)
 
-```bash
-jython2py3 mcp migrate "<TEMPLATE_ID>" --push
-```
+`mcp migrate` is deliberately **read-only against Release**: it pulls a template and writes
+the converted copy to a file. To get the migrated template *into* Release, you **re-import
+that file as a new template** — your original stays untouched.
 
-This calls `create_template` to create a **brand-new** template in Release:
+### Why the tool doesn't push for you
 
-- The **original is never modified** — `--push` only ever *creates*.
-- The new template's `id` is left for the server to assign (the original id is stripped).
-- Its title defaults to **`<original title> (migrated to Python 3)`**. Override it:
+The MCP server has no tool that recreates a *populated* template in one call. Its
+`create_template` tool only makes an **empty** template (title/folder/description); building
+a full copy would mean replaying `add_phase` + `add_task` for every phase and task, which
+**loses fidelity** for templates that use gates, task dependencies, nested parallel groups,
+per-task variables/teams, triggers, and so on.
 
-```bash
-jython2py3 mcp migrate "<TEMPLATE_ID>" --push --push-title "Deploy frontend (Py3)"
-```
+Release's **own importer**, by contrast, rebuilds a template with **full fidelity**. So the
+faithful, safe path is: migrate to a file → import the file as a new template.
 
-You'll see:
+### How to re-import
 
-```
-pushed new template 'Deploy frontend (migrated to Python 3)' to Release
-```
+- **Via the Release UI** — *Design → Templates → Import* (or *Folders → ⋮ → Import*) and
+  select your migrated file. Release creates a **new** template; give it a new name so it
+  sits alongside the original.
+- The saved file is the template's JSON representation (the same shape `get_template`
+  returned, with the Jython tasks now converted). Import it into a folder where you have
+  create-template permission.
 
-> **Recommended workflow:** migrate to a file first (`-o`), review the markers, **then**
-> push — rather than pushing a template that still contains unresolved `# TODO` / `# ERROR`
-> markers. If the server runs with `MCP_READONLY_MODE=true`, `--push` will be rejected by
-> design.
+> **Prefer to round-trip YAML instead?** If you'd rather not go through MCP at all, you can
+> export the template from Release as **Template-as-code YAML**, run
+> `jython2py3 migrate template.yaml -o migrated.yaml`, and re-import that YAML — a fully
+> offline, equally faithful path that needs no MCP server. See the README's
+> *Template-as-code YAML* section.
 
 ---
 
@@ -315,7 +323,7 @@ pushed new template 'Deploy frontend (migrated to Python 3)' to Release
 | `error: Could not talk to the Release MCP server at http://localhost:8000/mcp: …` | The server isn't reachable. Is the container running? Did you start it with `MCP_TRANSPORT=streamable-http` and `-p 8000:8000`? Is the URL/port right? Try `curl http://localhost:8000/mcp` (an MCP server replies, even if with an error). |
 | Connection works but `mcp list` returns *no templates* | The server connected to Release but found none, **or** auth to Release failed. Check the server's own logs (`DAI_SERVICE_LOG_LEVEL=DEBUG`) and that `RELEASE_TOKEN` is valid and your user can read templates. See the [server troubleshooting docs](https://docs.digital.ai/release/docs/how-to/release-mcp-server-troubleshooting). |
 | `get_template` fails or returns an unexpected shape | Tool/argument names can vary slightly between Release versions. Run `jython2py3 mcp list --tools` to see what your server actually exposes. The client tolerates several response shapes (bare object, or wrapped under `template`/`data`/`result`). |
-| `--push` fails with a permission/read-only error | The server is in `MCP_READONLY_MODE`, or your Release user lacks create-template permission. |
+| `mcp list` → "Invalid arguments … Missing required argument 'request'" in server logs | An older CLI build; the tools wrap parameters in a `request` object, which this version sends automatically. Make sure you're on the current `jython2py3`. |
 | You use SSE instead of streamable-http | Start the server with `MCP_TRANSPORT=sse` and pass `--transport sse` (and the SSE URL) to the CLI. |
 
 **Where the errors come from:** auth and connectivity to *Release* are the **server's**
@@ -346,8 +354,7 @@ jython2py3 mcp list --tools               # list server tool names
 jython2py3 mcp migrate <ID> -o out.json   # pull + migrate to a file
 jython2py3 mcp migrate <ID> --diff        # preview the JSON diff, write nothing
 jython2py3 mcp migrate <ID> --report r.json -o out.json
-jython2py3 mcp migrate <ID> --push        # also create a new migrated template in Release
-jython2py3 mcp migrate <ID> --push --push-title "My template (Py3)"
+# then re-import out.json as a NEW template via the Release UI (see §8)
 ```
 
 ### Reference links

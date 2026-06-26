@@ -3,8 +3,9 @@
 The official Release MCP server (Docker image ``xebialabs/dai-release-mcp``) speaks the
 Model Context Protocol. When started in ``streamable-http`` (or ``sse``) mode it
 listens on an HTTP endpoint - e.g. ``http://localhost:8000/mcp`` - and exposes Release
-operations as MCP *tools* (``list_templates``, ``get_template``, ``create_template``,
-...). This client connects to that endpoint and calls those tools.
+operations as MCP *tools*. This client uses the read-only ones it needs
+(``list_templates``, ``get_template``) to pull templates for migration; it never writes
+back (see ``docs/MCP-INTEGRATION.md`` for why migrated templates are re-imported instead).
 
 Design notes
 ------------
@@ -93,20 +94,21 @@ class ReleaseMCPClient:
     def list_templates(self, **arguments: Any) -> list[dict]:
         """Call the ``list_templates`` tool and return a list of template summaries.
 
-        Any keyword arguments are passed through as the tool's arguments (e.g. a
-        folder or title filter, depending on your server version).
+        The Release MCP tools wrap their parameters in a single ``request`` object;
+        any keyword arguments (``title``, ``tag``, ``parentId``, ``page``, ...) are
+        placed inside it.
         """
-        return _as_list(self.call_tool("list_templates", arguments))
+        return _as_list(self.call_tool("list_templates", {"request": arguments}))
 
-    def get_template(self, template_id: str, **arguments: Any) -> dict:
-        """Call ``get_template`` and return the full template object as a ``dict``."""
-        payload = {"template_id": template_id, **arguments}
-        result = self.call_tool("get_template", payload)
+    def get_template(self, name_or_id: str, **arguments: Any) -> dict:
+        """Call ``get_template`` and return the full template object as a ``dict``.
+
+        ``name_or_id`` is a template title or full id (e.g.
+        ``Applications/Folder.../Release...``).
+        """
+        request = {"name_or_id": name_or_id, **arguments}
+        result = self.call_tool("get_template", {"request": request})
         return _as_template(result)
-
-    def create_template(self, template: dict, **arguments: Any) -> Any:
-        """Call ``create_template`` to create a new template from ``template``."""
-        return self.call_tool("create_template", {"template": template, **arguments})
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> Any:
         """Call an arbitrary MCP tool by name and return its parsed result.
@@ -125,15 +127,18 @@ class ReleaseMCPClient:
             return asyncio.run(self._with_session(coro_fn))
         except ReleaseMCPError:
             raise
-        except ImportError as exc:  # the mcp extra is not installed
+        except BaseException as exc:  # noqa: BLE001 - includes ExceptionGroup from anyio
+            real = _unwrap(exc)
+            if isinstance(real, (ImportError, ModuleNotFoundError)):  # the mcp extra is absent
+                raise ReleaseMCPError(
+                    "The 'mcp' package is required for MCP integration. Install it with "
+                    "`uv sync --extra mcp` or `pip install "
+                    '"jython-to-python3-migrator[mcp]"`.'
+                ) from real
             raise ReleaseMCPError(
-                "The 'mcp' package is required for MCP integration. Install it with "
-                "`uv sync --extra mcp` or `pip install \"jython-to-python3-migrator[mcp]\"`."
-            ) from exc
-        except Exception as exc:  # noqa: BLE001 - present any transport error readably
-            raise ReleaseMCPError(
-                f"Could not talk to the Release MCP server at {self.config.url}: {exc}"
-            ) from exc
+                f"Could not talk to the Release MCP server at {self.config.url}: "
+                f"{type(real).__name__}: {real}"
+            ) from real
 
     async def _with_session(self, coro_fn: Any) -> Any:
         from mcp import ClientSession
@@ -169,6 +174,18 @@ class ReleaseMCPClient:
     async def _call_tool(self, session: Any, name: str, arguments: dict[str, Any]) -> Any:
         result = await session.call_tool(name, arguments=arguments)
         return _parse_tool_result(result)
+
+
+# -- error / result helpers -----------------------------------------------------
+
+
+def _unwrap(exc: BaseException) -> BaseException:
+    """Drill through ``ExceptionGroup`` layers (anyio's "errors in a TaskGroup") to
+    the first real underlying exception, so callers see the actual cause."""
+    inner = getattr(exc, "exceptions", None)
+    if inner:
+        return _unwrap(inner[0])
+    return exc
 
 
 # -- result parsing -------------------------------------------------------------

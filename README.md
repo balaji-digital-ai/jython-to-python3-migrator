@@ -123,8 +123,9 @@ file via the same Template-as-code view. A worked example is in
 Instead of exporting a YAML by hand, the migrator can pull a template **directly from a
 running Digital.ai Release instance** through the official
 [Release MCP server](https://hub.docker.com/r/xebialabs/dai-release-mcp), migrate its
-Jython tasks (the same rules as `.py`/`.yaml`), and optionally create a new migrated
-template back in Release — your original is never touched.
+Jython tasks (the same rules as `.py`/`.yaml`), and save the converted template to a file.
+It is **read-only against Release** — you create the new template by re-importing that
+file, so your original is never touched.
 
 ```bash
 uv sync --extra mcp                                   # one-time: install the MCP client SDK
@@ -132,12 +133,12 @@ export RELEASE_MCP_URL=http://localhost:8000/mcp      # point at your running MC
 
 jython2py3 mcp list                                   # list templates (id <tab> title)
 jython2py3 mcp migrate <TEMPLATE_ID> -o migrated.json # pull + migrate to a file
-jython2py3 mcp migrate <TEMPLATE_ID> --push           # also create a migrated copy in Release
+# then re-import migrated.json as a NEW template via the Release UI
 ```
 
 This CLI is the MCP **client**; it never holds your Release credentials — those live on
-the MCP server. Full setup (starting the server, connecting, testing, troubleshooting),
-written for someone new to MCP, is in
+the MCP server. Full setup (starting the server, connecting, testing, re-importing,
+troubleshooting), written for someone new to MCP, is in
 **[`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md)**.
 
 ---

@@ -167,7 +167,7 @@ def _add_mcp_commands(sub: argparse._SubParsersAction) -> None:
 
     pull = mcp_sub.add_parser(
         "migrate",
-        help="pull a template by id, migrate its Jython tasks, save (and optionally push)",
+        help="pull a template by id, migrate its Jython tasks, and save the result to a file",
     )
     pull.add_argument("template_id", metavar="TEMPLATE_ID", help="id of the template to migrate")
     pull.add_argument(
@@ -175,16 +175,6 @@ def _add_mcp_commands(sub: argparse._SubParsersAction) -> None:
         "--output",
         metavar="FILE",
         help="write the migrated template JSON here (default: stdout)",
-    )
-    pull.add_argument(
-        "--push",
-        action="store_true",
-        help="create a NEW migrated template back in Release (never overwrites the original)",
-    )
-    pull.add_argument(
-        "--push-title",
-        metavar="TITLE",
-        help="title for the pushed template (default: '<original> (migrated to Python 3)')",
     )
     pull.add_argument("--diff", action="store_true", help="print a JSON diff of the changes")
     pull.add_argument("--report", metavar="FILE", help="write a JSON migration report to FILE")
@@ -462,10 +452,6 @@ def cmd_mcp_migrate(args: argparse.Namespace) -> int:
     else:
         sys.stdout.write(migrated_json + "\n")
 
-    exit_code = 0
-    if args.push:
-        exit_code = _push_migrated(client, original, result.template, args.push_title)
-
     _print_mcp_summary(args.template_id, result)
     if args.report:
         _write_report(
@@ -480,38 +466,7 @@ def cmd_mcp_migrate(args: argparse.Namespace) -> int:
                 tasks_converted=result.tasks_converted,
             )],
         )
-    return exit_code
-
-
-def _push_migrated(client, original: dict, migrated: dict, push_title: str | None) -> int:
-    """Create a NEW template in Release from the migrated object. Never overwrites."""
-    from .mcp.client import ReleaseMCPError
-
-    base_title = original.get("title") or original.get("name") or "Template"
-    new_title = push_title or f"{base_title} (migrated to Python 3)"
-    to_push = _prepare_for_push(migrated, new_title)
-    try:
-        client.create_template(to_push)
-    except ReleaseMCPError as exc:
-        print(f"error: push failed: {exc}", file=sys.stderr)
-        return 1
-    print(f"pushed new template {new_title!r} to Release", file=sys.stderr)
     return 0
-
-
-def _prepare_for_push(migrated: dict, new_title: str) -> dict:
-    """Strip server-assigned identity so create_template makes a fresh template."""
-    import copy
-
-    to_push = copy.deepcopy(migrated)
-    # Remove ids so the server allocates new ones rather than rejecting a duplicate.
-    for key in ("id", "$id", "templateId"):
-        to_push.pop(key, None)
-    if "title" in to_push or "name" in to_push:
-        to_push["title" if "title" in to_push else "name"] = new_title
-    else:
-        to_push["title"] = new_title
-    return to_push
 
 
 def _print_mcp_summary(template_id: str, result) -> None:
