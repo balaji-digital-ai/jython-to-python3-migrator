@@ -35,11 +35,21 @@ Release MCP server, see the official docs linked at the [bottom](#reference-link
    This pulls in the [`mcp`][mcp-pypi] SDK. If it's missing when you run an `mcp` command,
    the CLI prints a one-line install hint instead of a stack trace.
 
-> **Running the command.** The examples below call `jython2py3` directly. With **uv**,
-> `uv sync` installs it into `.venv` (not on your PATH), so prefix each command with
-> `uv run --extra mcp` — e.g. `uv run --extra mcp jython2py3 mcp list` — or activate the
-> venv first (`.venv\Scripts\activate` on Windows, `source .venv/bin/activate` elsewhere).
-> A `pip install ".[mcp]"` puts `jython2py3` on PATH so the bare commands work as-is.
+> [!IMPORTANT]
+> ### Running the command
+>
+> The examples below call `jython2py3` directly. With **uv**, `uv sync` installs the command
+> into `.venv` — **it is not on your PATH**, so a bare `jython2py3 …` fails with
+> *"'jython2py3' is not recognized…"*. Do one of these:
+>
+> | How you installed | How to run |
+> | ----------------- | ---------- |
+> | **uv** (default) | prefix every command: `uv run --extra mcp jython2py3 mcp list` |
+> | **uv**, venv activated | `.venv\Scripts\activate` (Windows) / `source .venv/bin/activate`, then `jython2py3 mcp list` |
+> | **pip** (`pip install ".[mcp]"`) | `jython2py3` is on PATH — the bare commands work as-is |
+>
+> The rest of this guide writes `jython2py3 …` for brevity — add your `uv run --extra mcp`
+> prefix (or activate the venv) accordingly.
 
 This CLI never holds your Release credentials — those are configured on the MCP server. It
 only needs the **server's** URL.
