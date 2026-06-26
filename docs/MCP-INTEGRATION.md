@@ -35,6 +35,12 @@ Release MCP server, see the official docs linked at the [bottom](#reference-link
    This pulls in the [`mcp`][mcp-pypi] SDK. If it's missing when you run an `mcp` command,
    the CLI prints a one-line install hint instead of a stack trace.
 
+> **Running the command.** The examples below call `jython2py3` directly. With **uv**,
+> `uv sync` installs it into `.venv` (not on your PATH), so prefix each command with
+> `uv run --extra mcp` — e.g. `uv run --extra mcp jython2py3 mcp list` — or activate the
+> venv first (`.venv\Scripts\activate` on Windows, `source .venv/bin/activate` elsewhere).
+> A `pip install ".[mcp]"` puts `jython2py3` on PATH so the bare commands work as-is.
+
 This CLI never holds your Release credentials — those are configured on the MCP server. It
 only needs the **server's** URL.
 
