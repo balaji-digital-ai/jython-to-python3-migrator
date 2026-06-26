@@ -3,7 +3,7 @@ name = "jython-to-python3-migrator"
 version = "0.1.0"
 description = "Rule-based source-to-source migrator: Digital.ai Release Jython scripts -> Python 3 Script (Container)"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Digital.ai Release" }]
 keywords = ["jython", "python3", "migration", "codemod", "digital.ai", "release"]
@@ -20,6 +20,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# MCP integration: pull templates straight from a Release instance via the official
+# Release MCP server (docker image xebialabs/dai-release-mcp). Optional on purpose -
+# the core migrator stays offline and dependency-light; only `jython2py3 mcp ...`
+# needs this. Install with `uv sync --extra mcp` or `pip install ".[mcp]"`.
+mcp = [
+    "mcp>=1.2.0",
+]
 dev = [
     "pytest>=8.0.0",
     "ruff>=0.5.0",
