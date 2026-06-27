@@ -72,40 +72,21 @@ can call it in a tight loop.
 
 ---
 
-## Claude Code
+## Per-harness setup
 
-Two files make this turnkey:
-
-- **`.mcp.json`** registers the Release MCP server so Claude calls `list_templates` /
-  `get_template` as native tools. Copy the bundled template and adjust the URL:
-
-  ```bash
-  cp .mcp.json.example .mcp.json
-  # optionally: export RELEASE_MCP_URL=http://your-host:8000/mcp
-  ```
-
-  Reload Claude Code so it picks up the server (you'll be asked to approve it).
-
-- **The `migrate-release-template` skill** (`.claude/skills/migrate-release-template/`)
-  encodes the playbook below. Ask Claude to "migrate a Release template to Python 3"
-  (or name a template) and it runs the skill.
-
----
-
-## Other harnesses (OpenCode, Copilot, …)
-
-Nothing about the workflow is Claude-specific. Ready-made config + a skill-equivalent
-instructions file (each carrying the playbook below) ships for three common harnesses:
+Ready-made config + a skill-equivalent instructions file (each carrying the playbook
+below) ship for four harnesses. For each: start the Release MCP server, edit the URL in
+the config if it isn't the default `http://localhost:8000/mcp`, enable/approve the
+server in the tool, then invoke as shown.
 
 | Tool | MCP config | Instructions file | Invoke |
 | ---- | ---------- | ----------------- | ------ |
+| **Claude Code** | [`.mcp.json`](../.mcp.json.example) — copy `.mcp.json.example` → `.mcp.json` | [`.claude/skills/migrate-release-template/SKILL.md`](../.claude/skills/migrate-release-template/SKILL.md) | ask "migrate a Release template to Python 3", or `/migrate-release-template` |
 | **GitHub Copilot** (VS Code) | [`.vscode/mcp.json`](../.vscode/mcp.json) (`"servers"`, `type: http`) | [`.github/prompts/migrate-release-template.prompt.md`](../.github/prompts/migrate-release-template.prompt.md) | `/migrate-release-template` in Copilot Chat (Agent mode) |
 | **Cursor** | [`.cursor/mcp.json`](../.cursor/mcp.json) (`"mcpServers"`) | [`.cursor/rules/migrate-release-template.mdc`](../.cursor/rules/migrate-release-template.mdc) (`alwaysApply: false`) | enable the server, then ask in Agent chat — the rule auto-attaches by description |
 | **OpenCode** | [`opencode.json`](../opencode.json) (`mcp.release`, `type: remote`) | [`.opencode/command/migrate-release-template.md`](../.opencode/command/migrate-release-template.md) | `/migrate-release-template "<template>"` |
 
-For each: start the Release MCP server, edit the URL in the config if it isn't the
-default `http://localhost:8000/mcp`, enable/approve the server in the tool, then invoke
-as above. For any **other** MCP-aware harness, do the same three things by hand:
+For any **other** MCP-aware harness, do the same three things by hand:
 
 1. Register the Release MCP server in that tool's MCP configuration.
 2. Give the agent the playbook below (paste it, or save it where your harness loads
