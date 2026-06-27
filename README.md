@@ -140,22 +140,7 @@ Full setup, auth, and re-import notes: **[`docs/MCP-INTEGRATION.md`](docs/MCP-IN
 
 ## What it does
 
-Each rule is a **fixer** that the tool applies in one of two tiers:
-
-- **Tier 1 — auto-transform:** safe, mechanical rewrites done silently (Python 2 → 3
-  syntax, variable dictionaries, reserved objects, Java imports, `Date` → `datetime`).
-- **Tier 2 — annotate:** things that can't be rewritten safely are left intact and
-  flagged with a marker — `# TODO[jython2py3]` (*finish by hand*) or `# ERROR[jython2py3]`
-  (*can't run in Python 3 — redesign*).
-
-Run `jython2py3 migrate <script> --diff` to see both tiers, then resolve the markers by
-hand. The CLI summary (and `--report`) counts all three:
-`K auto-transform(s), N TODO(s) to review, M error(s) to fix`.
-
-The tool migrates the mechanical ~80% and flags the rest for human review.
-
-**Full rule-by-rule reference:** see **[`docs/MIGRATION-RULES.md`](docs/MIGRATION-RULES.md)**
-— every Tier 1 and Tier 2 rule with examples and the reasoning behind each marker.
+Safe rewrites are applied automatically; anything that can't be migrated safely is flagged for review — every rule, with examples, is in **[`docs/MIGRATION-RULES.md`](docs/MIGRATION-RULES.md)**.
 
 ---
 
@@ -196,18 +181,4 @@ comments and whitespace. `lib2to3` itself is deprecated and removed in Python 3.
 
 ## Development
 
-Want to add or change a migration rule, or run the tests and linter? The quick start:
-
-```bash
-uv sync --extra dev           # create .venv with dev tools from the lockfile
-uv run pytest                 # run all tests (offline; no Release server needed)
-uv run ruff check .           # lint
-```
-
-Adding a rule is a localised, isolated change — a new fixer under
-`src/jython2py3/fixers/` plus a unit test, with no other module changes.
-
-See **[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)** for the full developer guide —
-the engine architecture, updating the migration logic, the dev environment, and the
-test layout. The step-by-step for writing a fixer is in
-[`docs/ADDING_A_RULE.md`](docs/ADDING_A_RULE.md).
+Adding a rule, dev environment setup, and running the tests — see **[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)**.
