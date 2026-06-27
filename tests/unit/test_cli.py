@@ -156,3 +156,54 @@ def test_no_header_by_default(tmp_path):
 def test_no_inputs_found_is_usage_error(tmp_path):
     code = main(["migrate", str(tmp_path / "does_not_exist.py")])
     assert code == 2
+
+
+@pytest.mark.unit
+def test_json_template_migrated(tmp_path):
+    # A Release template object saved as JSON (what an agent pulls via MCP and writes
+    # to a file) is converted in place with the same rules as the .py / .yaml paths.
+    template = {
+        "id": "Applications/Folderabc/Releasedef",
+        "title": "Deploy",
+        "phases": [
+            {
+                "title": "Build",
+                "tasks": [
+                    {"title": "Greet", "type": "xlrelease.ScriptTask", "script": JYTHON},
+                    {"title": "Manual", "type": "xlrelease.Task"},
+                ],
+            }
+        ],
+    }
+    src = tmp_path / "template.json"
+    src.write_text(json.dumps(template), encoding="utf-8")
+    dest = tmp_path / "migrated.json"
+
+    code = main(["migrate", str(src), "-o", str(dest)])
+
+    assert code == 0
+    out = json.loads(dest.read_text(encoding="utf-8"))
+    task = out["phases"][0]["tasks"][0]
+    assert task["type"] == "containerPython.PythonTask"
+    assert 'print("hi")' in task["script"]
+    assert 'getReleaseVariable("b")' in task["script"]
+    # Non-Jython tasks are left exactly as they were.
+    assert out["phases"][0]["tasks"][1] == {"title": "Manual", "type": "xlrelease.Task"}
+
+
+@pytest.mark.unit
+def test_json_template_report_counts_tasks(tmp_path):
+    template = {
+        "type": "xlrelease.ScriptTask",
+        "title": "t",
+        "script": 'from java.util import Calendar\n',
+    }
+    src = tmp_path / "template.json"
+    src.write_text(json.dumps(template), encoding="utf-8")
+    report = tmp_path / "report.json"
+
+    main(["migrate", str(src), "--dry-run", "--report", str(report)])
+
+    file_report = json.loads(report.read_text(encoding="utf-8"))["files"][0]
+    assert file_report["tasks_converted"] == 1
+    assert file_report["todo_count"] == 1  # the Calendar import lands a TODO

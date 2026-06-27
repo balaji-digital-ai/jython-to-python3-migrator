@@ -29,6 +29,7 @@ from pathlib import Path
 
 from . import __version__
 from .engine import Migrator
+from .mcp.migrate import migrate_template_object
 from .yaml_migrate import migrate_yaml
 
 _ENCODING = "utf-8"
@@ -36,6 +37,12 @@ _ENCODING = "utf-8"
 # (embedded Jython script tasks are converted in place); everything else is treated
 # as a standalone Jython script.
 _YAML_SUFFIXES = {".yaml", ".yml"}
+# Release template *objects* saved as JSON - e.g. one an agent pulled over MCP with
+# `get_template` and wrote to a file. Migrated through the same in-place template path
+# as the YAML export: every embedded Jython task is converted, structure untouched.
+# This keeps the deterministic converter transport-free so an agent harness can own
+# the MCP/network side. See docs/AGENT-WORKFLOW.md.
+_JSON_SUFFIXES = {".json"}
 
 # Optional `--header` stamp prepended to each migrated Python script. The version-less
 # first line is the idempotency sentinel: a file already carrying it (even from another
@@ -80,7 +87,8 @@ def build_parser() -> argparse.ArgumentParser:
         "inputs",
         nargs="+",
         metavar="INPUT",
-        help="files, directories (searched for *.py / *.yaml / *.yml), or glob patterns",
+        help="files (.py Jython script, .yaml/.yml or .json Release template), "
+        "directories (searched for *.py / *.yaml / *.yml), or glob patterns",
     )
     migrate.add_argument(
         "-o",
@@ -258,21 +266,26 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     for src, base in sorted(sources):
         try:
             source_text = src.read_text(encoding=_ENCODING)
-            if src.suffix.lower() in _YAML_SUFFIXES:
-                yaml_result = migrate_yaml(source_text, migrator)
-                result = yaml_result
-                tasks_converted = yaml_result.tasks_converted
+            suffix = src.suffix.lower()
+            if suffix in _YAML_SUFFIXES:
+                result = migrate_yaml(source_text, migrator)
+                migrated_text = result.migrated
+                tasks_converted = result.tasks_converted
+            elif suffix in _JSON_SUFFIXES:
+                result = migrate_template_object(json.loads(source_text), migrator)
+                migrated_text = json.dumps(result.template, indent=2) + "\n"
+                tasks_converted = result.tasks_converted
             else:
                 result = migrator.migrate(source_text)
+                migrated_text = result.migrated
                 tasks_converted = None
         except Exception as exc:  # noqa: BLE001 - report, don't crash the whole run
             outcomes.append(FileOutcome(src, None, False, [], failure=str(exc)))
             exit_code = 1
             continue
 
-        # The header is a Python-script convention; YAML templates keep their
+        # The header is a Python-script convention; YAML/JSON templates keep their
         # annotations inside embedded scripts and are left structurally untouched.
-        migrated_text = result.migrated
         if args.header and tasks_converted is None:
             migrated_text = _with_header(migrated_text)
 

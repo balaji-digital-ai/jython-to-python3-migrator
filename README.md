@@ -51,7 +51,8 @@ usage: jython2py3 migrate [-h] [-o PATH] [--in-place] [--backup] [--dry-run]
                           INPUT [INPUT ...]
 
 positional arguments:
-  INPUT              files, directories (searched for *.py / *.yaml / *.yml), or glob patterns
+  INPUT              files (.py script, .yaml/.yml or .json Release template),
+                     directories (searched for *.py / *.yaml / *.yml), or glob patterns
 
 options:
   -h, --help         show this help message and exit
@@ -79,6 +80,7 @@ jython2py3 migrate scripts/ -o migrated/ --report report.json   # + JSON report
 jython2py3 migrate scripts/ -o migrated/ --report report.html   # + styled HTML report
 jython2py3 migrate scripts/ -o migrated/ --header   # stamp each output file
 jython2py3 migrate template.yaml -o migrated.yaml   # a Template-as-code export
+jython2py3 migrate template.json -o migrated.json   # a Release template object (e.g. pulled over MCP)
 ```
 
 ---
@@ -135,6 +137,40 @@ jython2py3 mcp migrate <TEMPLATE_ID> --diff      # preview what would change
 ```
 
 Full setup, auth, and re-import notes: **[`docs/MCP-INTEGRATION.md`](docs/MCP-INTEGRATION.md)**.
+
+---
+
+## For agents (Claude Code, OpenCode, Copilot)
+
+You can let an **AI agent harness** run the whole migration for you. The split is
+clean: the **agent owns orchestration** (it speaks MCP, lists templates, picks one,
+plans the work) and the **CLI owns the transform** (deterministic Jython → Python 3).
+The agent never re-implements the conversion, and the converter never grows network
+code.
+
+The harness connects to the Release MCP server itself, pulls a template as JSON, and
+hands that file to the transport-free converter:
+
+```bash
+# the agent pulls the template via MCP, saves it, then runs:
+jython2py3 migrate template.json -o migrated.json --report report.html
+```
+
+`migrate` accepts a Release **template object saved as JSON** as a first-class input —
+the same in-place conversion as the YAML export, with no MCP extra or server needed —
+so an agent can call it in a loop, read the report, surface the
+`# TODO[jython2py3]` / `# ERROR[jython2py3]` markers, and lay out the re-import.
+
+For **Claude Code**, two files make it turnkey:
+
+- copy [`.mcp.json.example`](.mcp.json.example) → `.mcp.json` to register the Release
+  MCP server, and
+- the [`migrate-release-template`](.claude/skills/migrate-release-template/SKILL.md)
+  skill encodes the playbook — just ask Claude to "migrate a Release template to
+  Python 3".
+
+How it works, the per-harness setup (including OpenCode / Copilot), and the full
+playbook and guardrails: **[`docs/AGENT-WORKFLOW.md`](docs/AGENT-WORKFLOW.md)**.
 
 ---
 

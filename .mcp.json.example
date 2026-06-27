@@ -1,0 +1,13 @@
+{
+  "//": "Copy this file to .mcp.json so Claude Code (or another MCP-aware harness) can",
+  "//1": "call the Release MCP server's tools (list_templates, get_template) natively.",
+  "//2": "Start the server in streamable-http mode first; see docs/AGENT-WORKFLOW.md.",
+  "//3": "RELEASE_MCP_URL overrides the default; add a headers/Authorization entry if the",
+  "//4": "endpoint sits behind an auth proxy. Release credentials live on the server, not here.",
+  "mcpServers": {
+    "release": {
+      "type": "http",
+      "url": "${RELEASE_MCP_URL:-http://localhost:8000/mcp}"
+    }
+  }
+}
