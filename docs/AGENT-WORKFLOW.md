@@ -94,9 +94,20 @@ Two files make this turnkey:
 
 ## Other harnesses (OpenCode, Copilot, …)
 
-Nothing about the workflow is Claude-specific. For any MCP-aware harness:
+Nothing about the workflow is Claude-specific. Ready-made config + a skill-equivalent
+instructions file (each carrying the playbook below) ships for three common harnesses:
 
-1. Register the same Release MCP server in that tool's MCP configuration.
+| Tool | MCP config | Instructions file | Invoke |
+| ---- | ---------- | ----------------- | ------ |
+| **GitHub Copilot** (VS Code) | [`.vscode/mcp.json`](../.vscode/mcp.json) (`"servers"`, `type: http`) | [`.github/prompts/migrate-release-template.prompt.md`](../.github/prompts/migrate-release-template.prompt.md) | `/migrate-release-template` in Copilot Chat (Agent mode) |
+| **Cursor** | [`.cursor/mcp.json`](../.cursor/mcp.json) (`"mcpServers"`) | [`.cursor/rules/migrate-release-template.mdc`](../.cursor/rules/migrate-release-template.mdc) (`alwaysApply: false`) | enable the server, then ask in Agent chat — the rule auto-attaches by description |
+| **OpenCode** | [`opencode.json`](../opencode.json) (`mcp.release`, `type: remote`) | [`.opencode/command/migrate-release-template.md`](../.opencode/command/migrate-release-template.md) | `/migrate-release-template "<template>"` |
+
+For each: start the Release MCP server, edit the URL in the config if it isn't the
+default `http://localhost:8000/mcp`, enable/approve the server in the tool, then invoke
+as above. For any **other** MCP-aware harness, do the same three things by hand:
+
+1. Register the Release MCP server in that tool's MCP configuration.
 2. Give the agent the playbook below (paste it, or save it where your harness loads
    project instructions from).
 3. Let it drive `uv run jython2py3 migrate <file>.json …` for the deterministic step.
