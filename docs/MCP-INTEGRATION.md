@@ -120,11 +120,13 @@ Useful variants:
 
 ```bash
 jython2py3 mcp migrate "<ID>" --diff                      # preview the diff, write nothing
-jython2py3 mcp migrate "<ID>" -o migrated.json --report report.json   # + a report file
+jython2py3 mcp migrate "<ID>" -o migrated.json --report report.html   # + a report file
 ```
 
 The report records how many tasks were converted, the transform/TODO/error counts, and the
-exact TODO/ERROR lines — the same report you get from the file-based `migrate --report`.
+exact TODO/ERROR lines — the same report you get from the file-based `migrate --report`. The
+format follows the filename: end it in `.html` (or `.htm`) for a self-contained HTML report
+you can open in a browser, or any other extension for JSON.
 
 Then open the output file and resolve any `# TODO[jython2py3]` / `# ERROR[jython2py3]`
 markers — the parts the tool can't safely auto-convert (`HttpRequest` calls, Java interop,
@@ -176,7 +178,7 @@ jython2py3 mcp list                          # list templates (id <tab> title)
 jython2py3 mcp list --tools                  # show server tool names
 jython2py3 mcp migrate <ID> -o out.json      # pull + migrate to a file (review/report)
 jython2py3 mcp migrate <ID> --diff           # preview the diff, write nothing
-jython2py3 mcp migrate <ID> --report r.json -o out.json
+jython2py3 mcp migrate <ID> --report r.html -o out.json   # .html → HTML report, else JSON
 
 # to re-import into Release, use the manual YAML path (§4):
 jython2py3 migrate template.yaml -o migrated.yaml   # then Import the YAML in the Release UI
