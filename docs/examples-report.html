@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jython2py3 migration report</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --border: #e2e5ea; --text: #1f2933;
+  --muted: #6b7280; --transform: #2563eb; --todo: #d97706; --error: #dc2626;
+  --changed: #059669; --failed: #b91c1c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 2rem; background: var(--bg); color: var(--text); line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+.subtitle { color: var(--muted); margin: 0 0 1.75rem; font-size: .9rem; }
+.cards { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 2rem; }
+.card {
+  flex: 1 1 8rem; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.1rem; border-top: 3px solid var(--border);
+}
+.card-num { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+.card-label {
+  color: var(--muted); font-size: .8rem; margin-top: .35rem;
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.card-changed { border-top-color: var(--changed); }
+.card-transform { border-top-color: var(--transform); }
+.card-todo { border-top-color: var(--todo); }
+.card-error { border-top-color: var(--error); }
+.card-failed { border-top-color: var(--failed); }
+h2 { font-size: 1.1rem; margin: 2rem 0 .75rem; }
+table {
+  width: 100%; border-collapse: collapse; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+th, td {
+  text-align: left; padding: .6rem .8rem; font-size: .88rem;
+  border-bottom: 1px solid var(--border);
+}
+th { background: #f0f2f5; font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.zero { color: #c0c6cf; }
+.t-transform { color: var(--transform); font-weight: 600; }
+.t-todo { color: var(--todo); font-weight: 600; }
+.t-error { color: var(--error); font-weight: 600; }
+.path { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; word-break: break-all; }
+.muted { color: var(--muted); }
+.badge {
+  display: inline-block; padding: .1rem .5rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 600;
+}
+.badge-changed { background: #d1fae5; color: #065f46; }
+.badge-unchanged { background: #eef0f3; color: var(--muted); }
+.badge-failed { background: #fee2e2; color: var(--failed); }
+.file-actions {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: .75rem 1.1rem; margin-bottom: 1rem;
+}
+.file-actions h3 {
+  font-size: .85rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: .25rem 0 .6rem; word-break: break-all;
+}
+.file-actions ul { list-style: none; margin: 0; padding: 0; }
+.file-actions li {
+  display: flex; gap: .6rem; align-items: baseline; padding: .3rem 0;
+  border-top: 1px solid var(--border);
+}
+.file-actions li:first-child { border-top: none; }
+.tag {
+  flex: 0 0 auto; font-size: .68rem; font-weight: 700;
+  padding: .08rem .4rem; border-radius: 4px;
+}
+.item-todo .tag { background: #fef3c7; color: var(--todo); }
+.item-error .tag { background: #fee2e2; color: var(--error); }
+.item-failed .tag { background: #fee2e2; color: var(--failed); }
+.file-actions code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; white-space: pre-wrap; word-break: break-word;
+}
+.all-clear {
+  background: #d1fae5; color: #065f46; border-radius: 10px;
+  padding: 1rem 1.1rem; font-weight: 600;
+}
+footer { color: var(--muted); font-size: .8rem; margin-top: 2.5rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>jython2py3 migration report</h1>
+<p class="subtitle">Jython &rarr; Python 3 &middot; v0.1.0 &middot; generated 2026-06-27 08:30:40</p>
+<div class="cards"><div class="card card-neutral"><div class="card-num">12</div><div class="card-label">Files</div></div><div class="card card-changed"><div class="card-num">12</div><div class="card-label">Changed</div></div><div class="card card-transform"><div class="card-num">85</div><div class="card-label">Auto-transforms</div></div><div class="card card-todo"><div class="card-num">17</div><div class="card-label">TODOs</div></div><div class="card card-error"><div class="card-num">10</div><div class="card-label">Errors</div></div><div class="card card-failed"><div class="card-num">0</div><div class="card-label">Failed</div></div></div>
+<h2>Files</h2>
+<table>
+<thead><tr><th>Source</th><th>Output</th><th>Status</th><th>Tasks</th><th>Transforms</th><th>TODOs</th><th>Errors</th></tr></thead>
+<tbody>
+<tr><td class="path">examples\jython\01_reserved_objects.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">9</td><td class="num zero">0</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\jython\02_python2_syntax.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">12</td><td class="num zero">0</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\jython\03_release_orchestration.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">11</td><td class="num zero">0</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\jython\04_release_report.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">10</td><td class="num zero">0</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\jython\05_release_variables.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">11</td><td class="num t-todo">3</td><td class="num t-error">1</td></tr>
+<tr><td class="path">examples\jython\06_variable_edge_cases.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">8</td><td class="num t-todo">3</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\jython\07_http_request.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">4</td><td class="num t-todo">1</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\jython\08_java_interop.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num zero">0</td><td class="num t-todo">8</td><td class="num t-error">9</td></tr>
+<tr><td class="path">examples\jython\09_deploy_pipeline.py</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num"></td><td class="num t-transform">6</td><td class="num t-todo">2</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\templates\jython\01_mixed_task_types.yaml</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num">1</td><td class="num t-transform">5</td><td class="num zero">0</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\templates\jython\02_release_pipeline.yaml</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num">2</td><td class="num t-transform">5</td><td class="num zero">0</td><td class="num zero">0</td></tr>
+<tr><td class="path">examples\templates\jython\03_nested_tasks.yaml</td><td class="path"><span class="muted">(stdout)</span></td><td><span class="badge badge-changed">changed</span></td><td class="num">2</td><td class="num t-transform">4</td><td class="num zero">0</td><td class="num zero">0</td></tr>
+</tbody>
+</table>
+<h2>Action items</h2>
+<section class="file-actions"><h3>examples\jython\05_release_variables.py</h3><ul><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `HashMap` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.util import HashMap`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] augmented assignment on releaseVariables[...] is read+write; split into getReleaseVariable/setReleaseVariable (guide section 8)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] `releaseVariables` has no direct getter/setter form here; rewrite this use with getReleaseVariable/setReleaseVariable by hand (guide section 8)</code></li></ul></section>
+<section class="file-actions"><h3>examples\jython\06_variable_edge_cases.py</h3><ul><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] `releaseVariables` has no direct getter/setter form here; rewrite this use with getReleaseVariable/setReleaseVariable by hand (guide section 8)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] `releaseVariables` has no direct getter/setter form here; rewrite this use with getReleaseVariable/setReleaseVariable by hand (guide section 8)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] replace `del releaseVariables[...]` manually (guide section 8)</code></li></ul></section>
+<section class="file-actions"><h3>examples\jython\07_http_request.py</h3><ul><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] rewrite this HttpRequest call using the `requests` library (guide section 9)</code></li></ul></section>
+<section class="file-actions"><h3>examples\jython\08_java_interop.py</h3><ul><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `SimpleDateFormat` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `Calendar` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `Calendar` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `Properties` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `Arrays` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `UUID` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `Pattern` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `BigDecimal` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-error"><span class="tag">ERROR</span><code># ERROR[jython2py3] don&#x27;t use Java in Python 3: `java.text.SimpleDateFormat` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `import java`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.util import Calendar`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.text import SimpleDateFormat`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.util import Properties`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.util import Arrays`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.util import UUID`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.util.regex import Pattern`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.math import BigDecimal`; replace its usages with a Python 3 equivalent (guide section 11)</code></li></ul></section>
+<section class="file-actions"><h3>examples\jython\09_deploy_pipeline.py</h3><ul><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] removed Java import `from java.util import HashMap`; replace its usages with a Python 3 equivalent (guide section 11)</code></li><li class="item-todo"><span class="tag">TODO</span><code># TODO[jython2py3] rewrite this HttpRequest call using the `requests` library (guide section 9)</code></li></ul></section>
+<footer>Resolve every <code>TODO[jython2py3]</code> and <code>ERROR[jython2py3]</code> marker by hand before importing the migrated scripts back into Release.</footer>
+</div>
+</body>
+</html>

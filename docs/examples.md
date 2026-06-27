@@ -10,6 +10,16 @@ For the rules themselves see the
 [Jython → Python 3 migration guide](JYTHON-TO-PYTHON3-MIGRATION.md); for an
 overview of the tool see the [README](../README.md).
 
+> **Browsable summary:** [`examples-report.html`](examples-report.html) is a generated
+> HTML view of every example on this page — per-file transform / TODO / ERROR counts and
+> a checklist of the exact markers to resolve — that you can open in a browser.
+
+Regenerate it after changing a rule (it is a dry run, so it never touches the goldens):
+
+```bash
+jython2py3 migrate examples/jython/ examples/templates/jython/ --dry-run --report docs/examples-report.html
+```
+
 ## How the examples are laid out
 
 * `examples/jython/<NN_name>.py` — the **input** (Jython, Python 2 syntax).

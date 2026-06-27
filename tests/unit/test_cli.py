@@ -86,6 +86,46 @@ def test_report_counts_tier1_transforms(tmp_path):
 
 
 @pytest.mark.unit
+def test_html_report_written(tmp_path):
+    # A .html/.htm extension switches the same flag to a styled HTML page.
+    src = tmp_path / "in.py"
+    src.write_text('from java.util import Calendar\n', encoding="utf-8")
+    report = tmp_path / "report.html"
+
+    main(["migrate", str(src), "--dry-run", "--report", str(report)])
+
+    html_doc = report.read_text(encoding="utf-8")
+    assert html_doc.startswith("<!DOCTYPE html>")
+    assert "jython2py3 migration report" in html_doc
+    assert "<table>" in html_doc
+    assert "in.py" in html_doc
+    assert "TODO" in html_doc  # the Calendar import lands a TODO action item
+
+
+@pytest.mark.unit
+def test_html_report_escapes_markup(tmp_path):
+    # TODO/ERROR lines are raw source; markup in them must never reach the page intact.
+    from pathlib import Path
+
+    from jython2py3.cli import FileOutcome, _write_html_report
+
+    outcome = FileOutcome(
+        source=Path("danger.py"),
+        output=None,
+        changed=True,
+        todos=["x = a < b & c  # TODO[jython2py3] <script>alert(1)</script>"],
+    )
+    report = tmp_path / "report.html"
+
+    _write_html_report(report, [outcome])
+
+    html_doc = report.read_text(encoding="utf-8")
+    assert "&lt;script&gt;" in html_doc
+    assert "<script>" not in html_doc
+    assert "a &lt; b &amp; c" in html_doc
+
+
+@pytest.mark.unit
 def test_header_prepended_and_idempotent(tmp_path):
     src = tmp_path / "in.py"
     src.write_text(JYTHON, encoding="utf-8")

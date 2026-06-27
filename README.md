@@ -60,7 +60,7 @@ options:
   --backup           with --in-place, keep the original as <file>.bak
   --dry-run          do not write anything; only report what would change
   --diff             print a unified diff for each changed file
-  --report FILE      write a JSON migration report to FILE
+  --report FILE      write a migration report to FILE (HTML if it ends in .html/.htm, else JSON)
   --header           prepend a '# Migrated from Jython by jython2py3' header to each script
 ```
 
@@ -76,6 +76,7 @@ jython2py3 migrate scripts/ -o migrated/            # mirror a directory tree
 jython2py3 migrate scripts/ --in-place --backup     # overwrite, keeping *.bak originals
 jython2py3 migrate "scripts/*.py" --dry-run --diff  # preview changes, write nothing
 jython2py3 migrate scripts/ -o migrated/ --report report.json   # + JSON report
+jython2py3 migrate scripts/ -o migrated/ --report report.html   # + styled HTML report
 jython2py3 migrate scripts/ -o migrated/ --header   # stamp each output file
 jython2py3 migrate template.yaml -o migrated.yaml   # a Template-as-code export
 ```
