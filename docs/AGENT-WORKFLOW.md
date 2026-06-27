@@ -34,6 +34,27 @@ side to the harness. The CLI's job shrinks to a single transport-free primitive:
 
 ---
 
+## Two modes: triage vs. actual migration
+
+Be explicit about which goal you're pursuing — they use different inputs:
+
+- **Triage (assess the issues).** The agent pulls a template as JSON over MCP
+  (`get_template`), runs `migrate template.json`, and reports the counts, diffs, and
+  every `# TODO[jython2py3]` / `# ERROR[jython2py3]` marker. This answers *"what will
+  this migration involve?"* across your instance. It is **preview only** — the migrated
+  JSON has no clean re-import path, and Release is never touched.
+- **Actual migration (produce the re-importable template).** Export the original
+  template from Release as **Template-as-code → YAML**, run `migrate template.yaml`,
+  resolve the markers, then re-import the YAML in the Release UI. YAML is the round-trip
+  Release re-imports with full fidelity.
+
+In short: **MCP/JSON is for understanding the issues; the YAML export/import is the real
+migration.** The agent triages over MCP, then switches to the downloaded YAML for the
+template it hands back — and it **never uploads to Release itself**; re-import is a human
+action in the UI.
+
+---
+
 ## The deterministic primitive
 
 The converter accepts a Release **template object saved as JSON** as a first-class
@@ -100,24 +121,44 @@ If a harness cannot speak MCP, fall back to the bundled
 
 ## The playbook
 
-1. **Discover** — call `list_templates`; confirm which template (`id`/`title`) to migrate.
-2. **Pull** — call `get_template` for that id; save the object verbatim to a working
-   file (`scratch/<id>.json`). Don't edit it.
-3. **Convert** — `jython2py3 migrate scratch/<id>.json -o scratch/<id>.migrated.json
-   --report scratch/<id>.report.html` (use `--diff` for a no-write preview).
+### Triage (MCP / JSON) — understand the work
+
+1. **Discover** — call `list_templates`; confirm which template (`id`/`title`) to assess.
+2. **Pull** — call `get_template` for that id; save the object verbatim to
+   `scratch/<id>.json`. Don't edit it.
+3. **Assess** — `jython2py3 migrate scratch/<id>.json --report scratch/<id>.report.html`
+   (add `-o … --diff` to inspect the output/diff). **Preview only** — the migrated JSON
+   has no clean re-import path; this exists to size up the work.
 4. **Review** — read the report; group by task and surface every TODO (needs a human
    rewrite) and ERROR (cannot run as-is), citing [MIGRATION-RULES.md](MIGRATION-RULES.md).
-5. **Resolve (optional)** — help edit only the `script` bodies in the migrated JSON to
-   clear markers; keep structure, ids, and other properties untouched.
-6. **Re-import** — the MCP path is read-only, so recreate the template in Release via
-   the Template-as-code YAML import described in [MCP-INTEGRATION.md §4](MCP-INTEGRATION.md#4-getting-the-migrated-template-back-into-release).
+   Report the scope to the user before going further.
+
+### Actual migration (YAML) — produce the template you re-import
+
+5. **Export the original** — ask the user to export the template from Release as
+   **Template-as-code → YAML** and point you at the file. (The agent can't export YAML
+   over MCP, and YAML is the format Release re-imports with full fidelity.)
+6. **Convert** — `jython2py3 migrate template.yaml -o migrated.yaml --report report.html`.
+7. **Resolve** — help edit only the `script` bodies in `migrated.yaml` to clear the
+   TODO/ERROR markers; keep structure, ids, and other properties untouched.
+8. **Upload — ask, don't assume.** Once the markers are resolved, **stop and ask the
+   user how to proceed**:
+   - **(1) Guide me** — walk them through **Design → Templates → Import** of
+     `migrated.yaml` in the Release UI, step by step; or
+   - **(2) I'll upload it** — hand over `migrated.yaml` with the import instructions and
+     let them do it.
+   The agent **never writes to Release itself** — re-import is always a human action in
+   the UI (see [MCP-INTEGRATION.md §4](MCP-INTEGRATION.md#4-getting-the-migrated-template-back-into-release)).
    The original template is never modified.
 
 ---
 
 ## Guardrails
 
-- **Read-only against Release.** Never write a template back through MCP.
+- **Read-only against Release.** Never write a template back through MCP, and never
+  upload the migrated template yourself — re-import is always a manual UI action.
+- **Ask before uploading.** After the markers are resolved, ask the user how they want
+  to upload (guided vs. manual); don't assume.
 - **The converter is authoritative.** Don't hand-rewrite Jython or "fix" code the tool
   flagged with a marker — surface the marker instead.
 - **Minimal diffs.** Only the task `type` and migrated `script` should change.
