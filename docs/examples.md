@@ -10,14 +10,17 @@ For the rules themselves see the
 [Jython → Python 3 migration guide](JYTHON-TO-PYTHON3-MIGRATION.md); for an
 overview of the tool see the [README](../README.md).
 
-> **Browsable summary:** [`examples-report.html`](examples-report.html) is a generated
-> HTML view of every example on this page — per-file transform / TODO / ERROR counts and
-> a checklist of the exact markers to resolve — that you can open in a browser.
+> **Generated summaries:** the same set of examples is published as a generated report
+> in two formats — a browsable [`examples-report.html`](examples-report.html) and a
+> machine-readable [`examples-report.json`](examples-report.json) — each with the per-file
+> transform / TODO / ERROR counts and the exact markers to resolve.
 
-Regenerate it after changing a rule (it is a dry run, so it never touches the goldens):
+Regenerate them after changing a rule (a dry run, so the goldens are never touched; the
+file extension selects the format):
 
 ```bash
 jython2py3 migrate examples/jython/ examples/templates/jython/ --dry-run --report docs/examples-report.html
+jython2py3 migrate examples/jython/ examples/templates/jython/ --dry-run --report docs/examples-report.json
 ```
 
 ## How the examples are laid out

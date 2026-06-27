@@ -1,0 +1,184 @@
+{
+  "tool": "jython2py3",
+  "version": "0.1.0",
+  "files": [
+    {
+      "source": "examples\\jython\\01_reserved_objects.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 9,
+      "todo_count": 0,
+      "todos": [],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\02_python2_syntax.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 12,
+      "todo_count": 0,
+      "todos": [],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\03_release_orchestration.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 11,
+      "todo_count": 0,
+      "todos": [],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\04_release_report.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 10,
+      "todo_count": 0,
+      "todos": [],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\05_release_variables.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 11,
+      "todo_count": 3,
+      "todos": [
+        "# TODO[jython2py3] removed Java import `from java.util import HashMap`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] augmented assignment on releaseVariables[...] is read+write; split into getReleaseVariable/setReleaseVariable (guide section 8)",
+        "# TODO[jython2py3] `releaseVariables` has no direct getter/setter form here; rewrite this use with getReleaseVariable/setReleaseVariable by hand (guide section 8)"
+      ],
+      "error_count": 1,
+      "errors": [
+        "# ERROR[jython2py3] don't use Java in Python 3: `HashMap` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)"
+      ],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\06_variable_edge_cases.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 8,
+      "todo_count": 3,
+      "todos": [
+        "# TODO[jython2py3] `releaseVariables` has no direct getter/setter form here; rewrite this use with getReleaseVariable/setReleaseVariable by hand (guide section 8)",
+        "# TODO[jython2py3] `releaseVariables` has no direct getter/setter form here; rewrite this use with getReleaseVariable/setReleaseVariable by hand (guide section 8)",
+        "# TODO[jython2py3] replace `del releaseVariables[...]` manually (guide section 8)"
+      ],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\07_http_request.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 4,
+      "todo_count": 1,
+      "todos": [
+        "# TODO[jython2py3] rewrite this HttpRequest call using the `requests` library (guide section 9)"
+      ],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\08_java_interop.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 0,
+      "todo_count": 8,
+      "todos": [
+        "# TODO[jython2py3] removed Java import `import java`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] removed Java import `from java.util import Calendar`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] removed Java import `from java.text import SimpleDateFormat`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] removed Java import `from java.util import Properties`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] removed Java import `from java.util import Arrays`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] removed Java import `from java.util import UUID`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] removed Java import `from java.util.regex import Pattern`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] removed Java import `from java.math import BigDecimal`; replace its usages with a Python 3 equivalent (guide section 11)"
+      ],
+      "error_count": 9,
+      "errors": [
+        "# ERROR[jython2py3] don't use Java in Python 3: `SimpleDateFormat` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `Calendar` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `Calendar` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `Properties` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `Arrays` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `UUID` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `Pattern` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `BigDecimal` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)",
+        "# ERROR[jython2py3] don't use Java in Python 3: `java.text.SimpleDateFormat` is a JVM class that the container cannot load - replace it with a Python 3 equivalent (guide section 11)"
+      ],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\jython\\09_deploy_pipeline.py",
+      "output": null,
+      "changed": true,
+      "transform_count": 6,
+      "todo_count": 2,
+      "todos": [
+        "# TODO[jython2py3] removed Java import `from java.util import HashMap`; replace its usages with a Python 3 equivalent (guide section 11)",
+        "# TODO[jython2py3] rewrite this HttpRequest call using the `requests` library (guide section 9)"
+      ],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": null,
+      "failure": null
+    },
+    {
+      "source": "examples\\templates\\jython\\01_mixed_task_types.yaml",
+      "output": null,
+      "changed": true,
+      "transform_count": 5,
+      "todo_count": 0,
+      "todos": [],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": 1,
+      "failure": null
+    },
+    {
+      "source": "examples\\templates\\jython\\02_release_pipeline.yaml",
+      "output": null,
+      "changed": true,
+      "transform_count": 5,
+      "todo_count": 0,
+      "todos": [],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": 2,
+      "failure": null
+    },
+    {
+      "source": "examples\\templates\\jython\\03_nested_tasks.yaml",
+      "output": null,
+      "changed": true,
+      "transform_count": 4,
+      "todo_count": 0,
+      "todos": [],
+      "error_count": 0,
+      "errors": [],
+      "tasks_converted": 2,
+      "failure": null
+    }
+  ]
+}

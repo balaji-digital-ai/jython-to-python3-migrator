@@ -402,8 +402,8 @@ def _write_json_report(path: Path, outcomes: list[FileOutcome]) -> None:
         "version": __version__,
         "files": [
             {
-                "source": str(o.source),
-                "output": str(o.output) if o.output else None,
+                "source": _display_path(o.source),
+                "output": _display_path(o.output) if o.output else None,
                 "changed": o.changed,
                 "transform_count": o.transforms,
                 "todo_count": len(o.todos),
