@@ -140,51 +140,16 @@ Full setup, auth, and re-import notes: **[`docs/MCP-INTEGRATION.md`](docs/MCP-IN
 
 ---
 
-## For agents (Claude Code, OpenCode, Copilot)
+## For agents (Claude Code, Copilot, Cursor, OpenCode)
 
-You can let an **AI agent harness** run the whole migration for you. The split is
-clean: the **agent owns orchestration** (it speaks MCP, lists templates, picks one,
-plans the work) and the **CLI owns the transform** (deterministic Jython → Python 3).
-The agent never re-implements the conversion, and the converter never grows network
-code.
+An AI agent harness can run the whole migration for you: the **agent owns
+orchestration** (it speaks MCP, lists templates, picks one, plans the work) and the
+**`jython2py3` CLI owns the transform** (deterministic Jython → Python 3). Ready-made
+MCP config and skill-equivalent instructions ship for Claude Code, GitHub Copilot,
+Cursor, and OpenCode.
 
-The harness connects to the Release MCP server itself, pulls a template as JSON, and
-hands that file to the transport-free converter:
-
-```bash
-# the agent pulls the template via MCP, saves it, then runs:
-jython2py3 migrate template.json -o migrated.json --report report.html
-```
-
-`migrate` accepts a Release **template object saved as JSON** as a first-class input —
-the same in-place conversion as the YAML export, with no MCP extra or server needed —
-so an agent can call it in a loop, read the report, surface the
-`# TODO[jython2py3]` / `# ERROR[jython2py3]` markers, and lay out the re-import.
-
-For **Claude Code**, two files make it turnkey:
-
-- copy [`.mcp.json.example`](.mcp.json.example) → `.mcp.json` to register the Release
-  MCP server, and
-- the [`migrate-release-template`](.claude/skills/migrate-release-template/SKILL.md)
-  skill encodes the playbook — just ask Claude to "migrate a Release template to
-  Python 3".
-
-### Other harnesses
-
-The same workflow ships ready-made for other MCP-aware tools — each pairs an MCP server
-config with a skill-equivalent instructions file carrying the full playbook:
-
-| Tool | MCP config | Instructions | Invoke |
-| ---- | ---------- | ------------ | ------ |
-| **GitHub Copilot** (VS Code) | [`.vscode/mcp.json`](.vscode/mcp.json) | [`.github/prompts/migrate-release-template.prompt.md`](.github/prompts/migrate-release-template.prompt.md) | `/migrate-release-template` in Copilot Chat (Agent mode) |
-| **Cursor** | [`.cursor/mcp.json`](.cursor/mcp.json) | [`.cursor/rules/migrate-release-template.mdc`](.cursor/rules/migrate-release-template.mdc) | enable the server, then ask in Agent chat (rule auto-attaches) |
-| **OpenCode** | [`opencode.json`](opencode.json) | [`.opencode/command/migrate-release-template.md`](.opencode/command/migrate-release-template.md) | `/migrate-release-template "<template>"` |
-
-Start the Release MCP server first, edit the URL in the config if it isn't the default
-`http://localhost:8000/mcp`, and enable/approve the server in your tool.
-
-How it works, the per-harness setup, and the full playbook and guardrails:
-**[`docs/AGENT-WORKFLOW.md`](docs/AGENT-WORKFLOW.md)**.
+→ **[`docs/AGENT-WORKFLOW.md`](docs/AGENT-WORKFLOW.md)** — how it works, per-tool setup
+and configuration, the playbook, and guardrails.
 
 ---
 

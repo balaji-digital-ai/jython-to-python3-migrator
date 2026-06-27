@@ -153,6 +153,25 @@ version of the playbook above.
 
 ---
 
+## Verify & troubleshoot
+
+- **Is the CLI runnable?** `uv run jython2py3 --version` (with uv it lives in `.venv`,
+  not on PATH — prefix commands with `uv run`).
+- **Is the MCP server connected?** Claude Code: the `/mcp` command. Copilot: *MCP: List
+  Servers* (Command Palette). Cursor: **Settings → MCP**. OpenCode: it loads on start.
+  You should see `release` exposing `list_templates` / `get_template`.
+- **Skill / instructions not picked up?** Confirm the tool is rooted in this repo and
+  the file is at the path in the table above (e.g. Claude needs
+  `.claude/skills/migrate-release-template/SKILL.md`).
+- **`error: The 'mcp' package is required…`** only applies to the built-in
+  [`jython2py3 mcp`](MCP-INTEGRATION.md) fallback — not this workflow, where the harness
+  (not the CLI) talks to MCP.
+- **Server unreachable?** Confirm it runs in `streamable-http` mode on the expected port
+  and the URL in your config matches; `curl -i http://localhost:8000/mcp` should return
+  some HTTP response. More: [MCP-INTEGRATION.md §5](MCP-INTEGRATION.md#5-troubleshooting).
+
+---
+
 ## Reference links
 
 - This project's MCP command guide — [MCP-INTEGRATION.md](MCP-INTEGRATION.md)
